@@ -168,7 +168,7 @@ import {
   createColumnHelper, flexRender, getCoreRowModel,
   getPaginationRowModel, getFilteredRowModel, useReactTable,
 } from '@tanstack/react-table';
-import { Project, Users } from '@/types';
+import { Project, Users } from '@/types/ProejctAndTask';
 import { InlineEdit } from '@/components/cells/InlineEdit';
 import { StatusSelectCell } from '@/components/cells/StatusSelect';
 import { OwnerPicker } from '@/components/cells/OwnerPicker';
@@ -186,16 +186,19 @@ interface ProjectsTableProps {
   users: Users[];
   stats: ProjectStatsMap;
   onEdit: (project: Project) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string | number) => void;
   onUpdate: (project: Project) => void;
   onOpenTasks: (project: Project) => void;
+  onProjectClick?: (projectId: string | number) => void;
+
 }
 
 /** Derives a stable KI-xxx code from a project id. */
-function projectCode(p: Project, idx: number): string {
-  const n = parseInt(p.id.replace(/\D/g, ''), 10) || idx + 1;
-  return `KI-${100 + n * 7}`;
+function projectCode(project: Project): string {
+  const id = Number(String(project.projectId).replace(/\D/g, ''));
+  return `PRI-${String(id).padStart(3, '0')}`;
 }
+
 
 export function ProjectsTable({
   projects,
@@ -205,6 +208,7 @@ export function ProjectsTable({
   onDelete,
   onUpdate,
   onOpenTasks,
+  onProjectClick,
 }: ProjectsTableProps) {
   const columnHelper = createColumnHelper<Project>();
   function getRandomColor(): string {
@@ -212,11 +216,19 @@ export function ProjectsTable({
     return colors[Math.floor(Math.random() * colors.length)];
   }
 
+  const handleProjectNameClick = (projectId: string | number) => {
+  console.log('Project clicked:', projectId);
+  // Option 1: Use the callback prop
+  if (onProjectClick) {
+    onProjectClick(String(projectId));
+  }
 
+
+};
 
   const columns = useMemo(
     () => [
-      columnHelper.accessor('id', {
+      columnHelper.accessor('projectId', {
         header: 'ID',
         cell: ({ row, table }) => {
           const idx = table.getCoreRowModel().rows.findIndex((r) => r.id === row.id);
@@ -229,7 +241,7 @@ export function ProjectsTable({
                 aria-hidden
               />
               <span className="text-xs font-mono text-muted-foreground">
-                {projectCode(p, idx)}
+                {projectCode(p)}
               </span>
             </div>
           );
@@ -237,17 +249,20 @@ export function ProjectsTable({
         size: 100,
       }),
 
-      columnHelper.accessor('name', {
+      columnHelper.accessor('projectTitle', {
         header: 'Project Name',
         cell: ({ row }) => {
           const p = row.original;
           return (
             <div>
               <InlineEdit
-                value={p.name}
-                onSave={(v) => onUpdate({ ...p, name: v })}
-                onClickWhenIdle={() => onOpenTasks(p)}
-              />
+                value={p.projectTitle}
+                onSave={(v) => onUpdate({ ...p, projectTitle: v })}
+                onClickWhenIdle={() => {
+                  // ✅ Navigate to project detail when name is clicked
+                  console.log('Project name clicked:', p.projectId);
+                  handleProjectNameClick(p.projectId);
+                }} />
               {p.tag && (
                 <div className="text-[10px] text-muted-foreground mt-0.5 pl-0.5">{p.tag}</div>
               )}
@@ -261,43 +276,78 @@ export function ProjectsTable({
         header: '%',
         cell: ({ row }) => {
           const p = row.original;
-          const pct = stats[p.id]?.pct ?? p.progress;
+          const pct = stats[p.projectId]?.pct ?? p.progress;
           return <span className="font-semibold">{pct}%</span>;
         },
         size: 80,
       }),
+      columnHelper.accessor('projectStatus', {
+        header: 'Status',
+        cell: ({ getValue }) => {
+          const status = getValue();
 
-      columnHelper.accessor('status', {
-        header: () => (
-          <span className="inline-flex items-center gap-1.5">
-            <Flag className="h-3 w-3" /> Status
-          </span>
-        ),
-        cell: ({ row }) => {
-          const p = row.original;
           return (
-            <StatusSelectCell
-              value={p.status}
-              onChange={(v) => onUpdate({ ...p, status: v })}
-            />
+            <span className="px-2 py-1 rounded-md text-xs font-medium bg-muted">
+              {status}
+            </span>
           );
         },
         size: 140,
       }),
 
-      columnHelper.accessor('ownerId', {
+      // columnHelper.accessor('status', {
+      //   header: () => (
+      //     <span className="inline-flex items-center gap-1.5">
+      //       <Flag className="h-3 w-3" /> Status
+      //     </span>
+      //   ),
+      //   cell: ({ row }) => {
+      //     const p = row.original;
+      //     return (
+      //       <StatusSelectCell
+      //         value={p.status}
+      //         onChange={(v) => onUpdate({ ...p, status: v })}
+      //       />
+      //     );
+      //   },
+      //   size: 140,
+      // }),
+
+      // columnHelper.accessor('ownerId', {
+      //   header: 'Owner',
+      //   cell: ({ row }) => {
+      //     const p = row.original;
+      //     return (
+      //       <OwnerPicker
+      //         users={users}
+      //         value={p.ownerId}
+      //         onChange={(v) => onUpdate({ ...p, ownerId: v })}
+      //       />
+      //     );
+      //   },
+      //   size: 160,
+      // }),
+      columnHelper.accessor('ownerName', {
         header: 'Owner',
-        cell: ({ row }) => {
-          const p = row.original;
+        cell: ({ getValue }) => {
+          const name = getValue() || '';
+
+          const initials = name
+            .split(' ')
+            .map((part) => part[0])
+            .join('')
+            .toUpperCase();
+
           return (
-            <OwnerPicker
-              users={users}
-              value={p.ownerId}
-              onChange={(v) => onUpdate({ ...p, ownerId: v })}
-            />
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-[#4CCEE1] text-white flex items-center justify-center text-xs font-semibold">
+                {initials}
+              </div>
+              <span>{name}</span>
+            </div>
           );
         },
-        size: 160,
+        size: 180,
       }),
 
       columnHelper.display({
@@ -307,10 +357,12 @@ export function ProjectsTable({
             <ClipboardList className="h-3 w-3" /> Tasks
           </span>
         ),
-        cell: ({ row }) => {
-          const s = stats[row.original.id] ?? { done: 0, total: 0 };
-          return <CountBar done={s.done} total={s.total} />;
-        },
+        cell: ({ row }) => (
+          <CountBar
+            done={row.original.completedTask || 0}
+            total={row.original.totalTask || 0}
+          />
+        ),
         size: 200,
       }),
 
@@ -322,7 +374,7 @@ export function ProjectsTable({
           </span>
         ),
         cell: ({ row }) => {
-          const s = stats[row.original.id];
+          const s = stats[row.original.projectId];
           return s?.milestones > 0
             ? <CountBar done={s.mDone} total={s.milestones} colorClass="bg-info" />
             : <PillEmpty label="No Milestones" />;
@@ -338,7 +390,7 @@ export function ProjectsTable({
           </span>
         ),
         cell: ({ row }) => {
-          const s = stats[row.original.id];
+          const s = stats[row.original.projectId];
           return s?.issues > 0
             ? <CountBar done={Math.floor(s.issues / 2)} total={s.issues} colorClass="bg-danger" />
             : <PillEmpty label="No Issues" />;
@@ -372,7 +424,7 @@ export function ProjectsTable({
         ),
         cell: ({ row }) => {
           const p = row.original;
-          const overdue = new Date(p.endDate).getTime() < Date.now() && p.status !== 'completed';
+          const overdue = new Date(p.endDate).getTime() < Date.now() && p.projectStatus !== 'COMPLETED';
           return (
             <DatePickerCell
               value={p.endDate}
@@ -422,7 +474,7 @@ export function ProjectsTable({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-danger focus:text-danger"
-                  onClick={() => onDelete(p.id)}
+                  onClick={() => onDelete(p.projectId)}
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
                 </DropdownMenuItem>
@@ -433,7 +485,7 @@ export function ProjectsTable({
         size: 50,
       }),
     ],
-    [users, stats, onUpdate, onOpenTasks, onEdit, onDelete],
+    [users, stats, onUpdate, onOpenTasks, onEdit, onDelete ,onProjectClick],
   );
 
   const table = useReactTable({
@@ -442,14 +494,14 @@ export function ProjectsTable({
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    manualPagination: true, // pagination is handled externally by ProjectPagination
+    manualPagination: true,
   });
 
   return (
     <div className="card-elevated overflow-hidden">
       <div className="overflow-auto scrollbar-thin max-h-[640px]">
         <table className="w-full text-sm border-collapse">
-          <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
+          <thead className="sticky top-0 z-10 bg-blue-100 text-[#232946] backdrop-blur">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b border-border">
                 {headerGroup.headers.map((header) => (

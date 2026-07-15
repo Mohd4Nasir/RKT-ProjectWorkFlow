@@ -5,7 +5,7 @@ import {
   ChevronRight, ChevronLeft, Edit3,  Zap,
   User,
 } from 'lucide-react';
-import { Task, Project, Users } from '@/types';
+import { Task, Project, Users } from '@/types/ProejctAndTask';
 import { UserAvatar } from '@/components/UserAvatar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -64,19 +64,23 @@ export const TaskDetailPanel = memo(function TaskDetailPanel({
   return (
     <>
       {/* Task panel backdrop */}
-      <div className="fixed inset-0 z-60" onClick={onClose} />
+      <div 
+        className="fixed inset-0 z-[100]" 
+        onClick={onClose} 
+        style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+      />
 
-      {/* Slide-in panel from right */}
-      <div className="fixed top-8 right-8 bottom-8 z-70 w-[min(780px,90vw)] flex rounded-2xl shadow-2xl overflow-hidden border border-border bg-background animate-slide-in-right">
+      {/* Slide-in panel from right - 90% width */}
+      <div className="fixed top-2 right-2 bottom-2 z-[101] w-[99%] flex rounded-2xl shadow-2xl overflow-hidden border border-border bg-background animate-slide-in-right">
 
-        {/* Left sidebar - task list */}
-        <div className="w-64 flex-shrink-0 bg-[#EEEAF8] border-r border-border overflow-y-auto">
-          <div className="flex items-center justify-between p-3 border-b border-border/50">
+        {/* Left sidebar */}
+        <div className="w-80 flex-shrink-0 bg-[#EEEAF8] border-r border-border overflow-y-auto">
+          <div className="flex items-center justify-between p-4 border-b border-border/50">
             <span className="text-xs font-semibold text-muted-foreground">General</span>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
           {/* The current task highlighted */}
-          <div className="p-2 bg-white border border-primary/20 rounded-lg m-2 shadow-sm">
+          <div className="p-3 bg-white border border-primary/20 rounded-lg m-3 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[10px] font-mono text-muted-foreground">{taskCode()}</span>
               <span className={cn('text-[10px] px-1.5 py-0.5 rounded font-bold', statusCfg.bg, statusCfg.color)}>

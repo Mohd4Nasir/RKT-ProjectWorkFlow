@@ -17,6 +17,7 @@ import { relativeTime } from '@/utils/format';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { performLogout } from '@/services/keycloakService';
 
 export function Header() {
   const dispatch = useAppDispatch();
@@ -27,6 +28,8 @@ export function Header() {
   const projects = useAppSelector((s) => s.projects.items);
   const tasks = useAppSelector((s) => s.tasks.items);
   const users = useAppSelector((s) => s.users.items);
+  const [loading, setLoading] = useState(false);
+
 
   const [q, setQ] = useState('');
 
@@ -42,9 +45,30 @@ export function Header() {
 
   const unread = notifications.filter((n) => !n.read).length;
 
-  const onLogout = () => {
-    dispatch(logout());
-    navigate('/login');
+  const handleLogout = async () => {
+    setLoading(true);
+
+    try {
+      // Step 1: Clear Redux state
+      dispatch(logout());
+
+      // Step 2: Clear localStorage/sessionStorage (if any)
+      localStorage.removeItem('kc_token');
+      localStorage.removeItem('kc_refresh_token');
+      sessionStorage.clear();
+
+      // Step 3: Keycloak logout - redirect to login page
+      await performLogout(`${window.location.origin}/login`);
+
+      // Note: performLogout redirects, so code below may not execute
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Force redirect if Keycloak logout fails
+      window.location.href = '/login';
+    } finally {
+      setLoading(false);
+    }
   };
 
   const flipTheme = () => {
@@ -145,7 +169,7 @@ export function Header() {
             <DropdownMenuItem onClick={() => navigate('/profile')}><UserIcon className="h-4 w-4 mr-2" />Profile</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/settings')}><Settings className="h-4 w-4 mr-2" />Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onLogout} className="text-danger focus:text-danger"><LogOut className="h-4 w-4 mr-2" />Log out</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout} className="text-danger focus:text-danger"><LogOut className="h-4 w-4 mr-2" />Log out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -153,6 +177,7 @@ export function Header() {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function SearchSection({ title, empty, children }: any) {
   const arr = Array.isArray(children) ? children : [children];
   return (

@@ -2,7 +2,7 @@ import { memo, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { ProjectStatus } from '@/types';
+import { ProjectStatus } from '@/types/ProejctAndTask';
 
 export type StatusOption = {
   value: ProjectStatus;

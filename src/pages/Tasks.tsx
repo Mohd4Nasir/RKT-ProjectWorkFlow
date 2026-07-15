@@ -419,7 +419,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Task, TaskStatus, Priority } from '@/types';
+import { Task, TaskStatus, Priority } from '@/types/ProejctAndTask';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 

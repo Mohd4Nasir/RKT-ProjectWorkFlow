@@ -1,0 +1,12 @@
+/* RishiKirti Theme Styles */
+body {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    font-family: 'Inter', sans-serif;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .max-w-md {
+        margin: 1rem;
+    }
+}

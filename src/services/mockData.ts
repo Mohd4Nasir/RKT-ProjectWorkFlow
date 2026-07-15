@@ -1,23 +1,222 @@
-import { Project, Task, Users, Notification, ActivityItem } from '@/types';
+import { Project, Task, Users, Notification, ActivityItem, PublicProject } from '@/types/ProejctAndTask';
 
 export const mockUsers: Users[] = [
-  { id: 'u1', name: 'Aarav Sharma', email: 'aarav@rishikirti.com', role: 'admin', department: 'Engineering', status: 'active', joinedAt: '2023-04-12' },
-  { id: 'u2', name: 'Sangeeta Patel', email: 'sangeeta@rishikirti.com', role: 'user', department: 'Design', status: 'active', joinedAt: '2023-06-21' },
-  { id: 'u3', name: 'Rahul Verma', email: 'rahul@rishikirti.com', role: 'user', department: 'Engineering', status: 'active', joinedAt: '2024-01-08' },
-  { id: 'u4', name: 'Sneha Iyer', email: 'sneha@rishikirti.com', role: 'user', department: 'Product', status: 'active', joinedAt: '2024-02-15' },
-  { id: 'u5', name: 'Vikram Singh', email: 'vikram@rishikirti.com', role: 'user', department: 'QA', status: 'active', joinedAt: '2023-09-03' },
-  { id: 'u6', name: 'Ananya Rao', email: 'ananya@rishikirti.com', role: 'user', department: 'Marketing', status: 'inactive', joinedAt: '2023-11-19' },
-  { id: 'u7', name: 'Kabir Mehta', email: 'kabir@rishikirti.com', role: 'user', department: 'Engineering', status: 'active', joinedAt: '2024-03-22' },
-  { id: 'u8', name: 'Isha Kapoor', email: 'isha@rishikirti.com', role: 'admin', department: 'Operations', status: 'active', joinedAt: '2022-12-01' },
+  { id: 1, name: 'Aarav Sharma', email: 'aarav@rishikirti.com', role: 'admin', department: 'Engineering', status: 'active', joinedAt: '2023-04-12' },
+  { id: 2, name: 'Sangeeta Patel', email: 'sangeeta@rishikirti.com', role: 'user', department: 'Design', status: 'active', joinedAt: '2023-06-21' },
+  { id: 3, name: 'Rahul Verma', email: 'rahul@rishikirti.com', role: 'user', department: 'Engineering', status: 'active', joinedAt: '2024-01-08' },
+  { id: 4, name: 'Sneha Iyer', email: 'sneha@rishikirti.com', role: 'user', department: 'Product', status: 'active', joinedAt: '2024-02-15' },
+  { id: 5, name: 'Vikram Singh', email: 'vikram@rishikirti.com', role: 'user', department: 'QA', status: 'active', joinedAt: '2023-09-03' },
+  { id: 6, name: 'Ananya Rao', email: 'ananya@rishikirti.com', role: 'user', department: 'Marketing', status: 'inactive', joinedAt: '2023-11-19' },
+  { id: 7, name: 'Kabir Mehta', email: 'kabir@rishikirti.com', role: 'user', department: 'Engineering', status: 'active', joinedAt: '2024-03-22' },
+  { id: 8, name: 'Isha Kapoor', email: 'isha@rishikirti.com', role: 'admin', department: 'Operations', status: 'active', joinedAt: '2022-12-01' },
 ];
 
+
+//  all  Public projects are accessible to all users, but only those with 'public' access can be joined without restrictions. Projects with 'restricted' access require approval from the project owner, while 'private' projects are not visible to users who are not members.
+
+
+
+ export const mockPublicProjects: PublicProject[] = [
+  {
+    id: 'pub_1',
+    name: 'Open Source AI Library',
+    description: 'Community-driven AI library for developers',
+    status: 'active',
+    ownerId: 'user_1',
+    access: 'public',
+    createdAt: '2024-01-15',
+    joined: false,
+    tags: ['AI', 'Open Source', 'Machine Learning'],
+    stars: 245
+  },
+  {
+    id: 'pub_2',
+    name: 'Climate Action Initiative',
+    description: 'Global collaboration on climate change solutions',
+    status: 'in-progress',
+    ownerId: 'user_2',
+    access: 'public',
+    createdAt: '2024-02-20',
+    joined: true,
+    tags: ['Environment', 'Sustainability'],
+    stars: 189
+  },
+  {
+    id: 'pub_3',
+    name: 'Web Components Library',
+    description: 'Reusable web components for modern applications',
+    status: 'active',
+    ownerId: 'user_3',
+    access: 'restricted',
+    createdAt: '2024-01-10',
+    joined: false,
+    tags: ['Web Development', 'Components'],
+    stars: 67
+  },
+  {
+    id: 'pub_4',
+    name: 'Blockchain Education Platform',
+    description: 'Learn blockchain development through hands-on projects',
+    status: 'active',
+    ownerId: 'user_1',
+    access: 'public',
+    createdAt: '2024-03-01',
+    joined: false,
+    tags: ['Blockchain', 'Education'],
+    stars: 123
+  },
+  {
+    id: 'pub_5',
+    name: 'Health Data Standardization',
+    description: 'Standardizing healthcare data formats and APIs',
+    status: 'on-hold',
+    ownerId: 'user_4',
+    access: 'restricted',
+    createdAt: '2023-12-05',
+    joined: false,
+    tags: ['Healthcare', 'Data Standards'],
+    stars: 45
+  },
+  {
+    id: 'pub_6',
+    name: 'Mobile UI Kit',
+    description: 'Cross-platform mobile UI components',
+    status: 'completed',
+    ownerId: 'user_2',
+    access: 'public',
+    createdAt: '2023-11-20',
+    joined: true,
+    tags: ['Mobile', 'UI/UX'],
+    stars: 234
+  },
+  {
+    id: 'pub_7',
+    name: 'DevOps Toolchain',
+    description: 'Automated CI/CD pipeline tools',
+    status: 'in-progress',
+    ownerId: 'user_5',
+    access: 'public',
+    createdAt: '2024-02-10',
+    joined: false,
+    tags: ['DevOps', 'Automation'],
+    stars: 178
+  },
+  {
+    id: 'pub_8',
+    name: 'Data Visualization Framework',
+    description: 'Framework for building interactive data dashboards',
+    status: 'active',
+    ownerId: 'user_3',
+    access: 'public',
+    createdAt: '2024-01-25',
+    joined: false,
+    tags: ['Data Visualization', 'Analytics'],
+    stars: 312
+  }
+];
 export const mockProjects: Project[] = [
-  { id: 'p1', name: 'Atlas Banking Portal', description: 'Next-gen retail banking dashboard with AI insights.', status: 'active', progress: 68, startDate: '2025-01-15', endDate: '2026-08-30', members: ['u1','u2','u3','u7'], ownerId: 'u1', sla: 'on-track', tag: 'Fintech', color: 'hsl(261 38% 59%)' },
-  { id: 'p2', name: 'Helios CRM Revamp', description: 'Customer relationship platform redesign and migration.', status: 'active', progress: 42, startDate: '2025-03-01', endDate: '2026-09-15', members: ['u2','u4','u5'], ownerId: 'u8', sla: 'at-risk', tag: 'SaaS', color: 'hsl(38 92% 50%)' },
-  { id: 'p3', name: 'Orbit Mobile App', description: 'iOS and Android consumer app for ride sharing.', status: 'on-hold', progress: 25, startDate: '2024-11-10', endDate: '2026-06-30', members: ['u3','u7'], ownerId: 'u1', sla: 'breached', tag: 'Mobile', color: 'hsl(0 84% 60%)' },
-  { id: 'p4', name: 'Nimbus Cloud Migration', description: 'Migrate legacy infrastructure to AWS multi-region.', status: 'active', progress: 81, startDate: '2024-09-20', endDate: '2026-05-15', members: ['u1','u3','u5','u8'], ownerId: 'u8', sla: 'on-track', tag: 'DevOps', color: 'hsl(160 84% 39%)' },
-  { id: 'p5', name: 'Lumen Marketing Site', description: 'Brand refresh with headless CMS and CRO.', status: 'completed', progress: 100, startDate: '2024-06-01', endDate: '2025-12-20', members: ['u2','u6'], ownerId: 'u8', sla: 'on-track', tag: 'Web', color: 'hsl(217 91% 60%)' },
-  { id: 'p6', name: 'Vector Analytics', description: 'Real-time analytics platform for retail customers.', status: 'active', progress: 55, startDate: '2025-02-12', endDate: '2026-10-01', members: ['u4','u5','u7'], ownerId: 'u1', sla: 'at-risk', tag: 'Data', color: 'hsl(273 67% 49%)' },
+  {
+    id: "p1",
+    projectId: "P001",
+    projectTitle: "Atlas Banking Portal",
+    ownerId: "u1",
+    ownerName: "John Doe",
+    projectStatus: "IN_PROGRESS",
+    description: "Next-gen retail banking dashboard with AI insights.",
+    progress: 68,
+    startDate: "2025-01-15",
+    endDate: "2026-08-30",
+    members: ["u1", "u2", "u3", "u7"],
+    totalTask: 120,
+    completedTask: 82,
+    tag: "Fintech",
+    color: "hsl(261 38% 59%)",
+  },
+  {
+    id: "p2",
+    projectId: "P002",
+    projectTitle: "Helios CRM Revamp",
+    ownerId: "u8",
+    ownerName: "Sarah Wilson",
+    projectStatus: "IN_PROGRESS",
+    description: "Customer relationship platform redesign and migration.",
+    progress: 42,
+    startDate: "2025-03-01",
+    endDate: "2026-09-15",
+    members: ["u2", "u4", "u5"],
+    totalTask: 85,
+    completedTask: 36,
+    tag: "SaaS",
+    color: "hsl(38 92% 50%)",
+  },
+  {
+    id: "p3",
+    projectId: "P003",
+    projectTitle: "Orbit Mobile App",
+    ownerId: "u1",
+    ownerName: "John Doe",
+    projectStatus: "ON_HOLD",
+    description: "iOS and Android consumer app for ride sharing.",
+    progress: 25,
+    startDate: "2024-11-10",
+    endDate: "2026-06-30",
+    members: ["u3", "u7"],
+    totalTask: 60,
+    completedTask: 15,
+    tag: "Mobile",
+    color: "hsl(0 84% 60%)",
+  },
+  {
+    id: "p4",
+    projectId: "P004",
+    projectTitle: "Nimbus Cloud Migration",
+    ownerId: "u8",
+    ownerName: "Sarah Wilson",
+    projectStatus: "IN_PROGRESS",
+    description: "Migrate legacy infrastructure to AWS multi-region.",
+    progress: 81,
+    startDate: "2024-09-20",
+    endDate: "2026-05-15",
+    members: ["u1", "u3", "u5", "u8"],
+    totalTask: 150,
+    completedTask: 122,
+    tag: "DevOps",
+    color: "hsl(160 84% 39%)",
+  },
+  {
+    id: "p5",
+    projectId: "P005",
+    projectTitle: "Lumen Marketing Site",
+    ownerId: "u8",
+    ownerName: "Sarah Wilson",
+    projectStatus: "COMPLETED",
+    description: "Brand refresh with headless CMS and CRO.",
+    progress: 100,
+    startDate: "2024-06-01",
+    endDate: "2025-12-20",
+    members: ["u2", "u6"],
+    totalTask: 40,
+    completedTask: 40,
+    tag: "Web",
+    color: "hsl(217 91% 60%)",
+  },
+  {
+    id: "p6",
+    projectId: "P006",
+    projectTitle: "Vector Analytics",
+    ownerId: "u1",
+    ownerName: "John Doe",
+    projectStatus: "IN_PROGRESS",
+    description: "Real-time analytics platform for retail customers.",
+    progress: 55,
+    startDate: "2025-02-12",
+    endDate: "2026-10-01",
+    members: ["u4", "u5", "u7"],
+    totalTask: 95,
+    completedTask: 52,
+    tag: "Data",
+    color: "hsl(273 67% 49%)",
+  },
 ];
 
 const today = new Date('2026-05-01');
@@ -25,19 +224,456 @@ const addDays = (d: number) => {
   const x = new Date(today); x.setDate(x.getDate() + d); return x.toISOString().slice(0,10);
 };
 
-export const mockTasks: Task[] = [
-  { id: 't1', projectId: 'p1', title: 'Design dashboard widgets', description: 'Create reusable widget components with theming.', status: 'in-progress', priority: 'high', assigneeId: 'u2', dueDate: addDays(3), createdAt: addDays(-12), sla: 'on-track', subtasks: [{id:'s1', title:'Audit existing components', done:true},{id:'s2', title:'Create Figma library', done:true},{id:'s3', title:'Build storybook', done:false}], comments: [{id:'c1', authorId:'u1', text:'Looking great so far!', createdAt: addDays(-2)}], attachments: [{id:'a1', name:'wireframe.fig', size:'2.4MB', type:'figma'}] },
-  { id: 't2', projectId: 'p1', title: 'Integrate auth API', description: 'Wire up OAuth + 2FA flow.', status: 'todo', priority: 'high', assigneeId: 'u3', dueDate: addDays(7), createdAt: addDays(-5), sla: 'on-track', subtasks: [], comments: [], attachments: [] },
-  { id: 't3', projectId: 'p1', title: 'Performance audit', description: 'Lighthouse + Core Web Vitals review.', status: 'done', priority: 'medium', assigneeId: 'u7', dueDate: addDays(-2), createdAt: addDays(-20), sla: 'on-track', subtasks: [], comments: [], attachments: [] },
-  { id: 't4', projectId: 'p2', title: 'Customer data migration', description: 'ETL pipeline for legacy CRM.', status: 'in-progress', priority: 'high', assigneeId: 'u5', dueDate: addDays(1), createdAt: addDays(-15), sla: 'at-risk', subtasks: [{id:'s4', title:'Schema mapping', done:true},{id:'s5', title:'Run dry migration', done:false}], comments: [], attachments: [] },
-  { id: 't5', projectId: 'p2', title: 'New contact form', description: 'Multi-step form with validation.', status: 'todo', priority: 'medium', assigneeId: 'u4', dueDate: addDays(10), createdAt: addDays(-3), sla: 'on-track', subtasks: [], comments: [], attachments: [] },
-  { id: 't6', projectId: 'p3', title: 'iOS push notifications', description: 'APNs integration.', status: 'todo', priority: 'low', assigneeId: 'u3', dueDate: addDays(-3), createdAt: addDays(-25), sla: 'breached', subtasks: [], comments: [], attachments: [] },
-  { id: 't7', projectId: 'p4', title: 'Set up VPC peering', description: 'Cross-region peering and route tables.', status: 'done', priority: 'high', assigneeId: 'u8', dueDate: addDays(-5), createdAt: addDays(-30), sla: 'on-track', subtasks: [], comments: [], attachments: [] },
-  { id: 't8', projectId: 'p4', title: 'Database failover test', description: 'Simulate primary failure.', status: 'in-progress', priority: 'high', assigneeId: 'u1', dueDate: addDays(5), createdAt: addDays(-8), sla: 'on-track', subtasks: [], comments: [], attachments: [] },
-  { id: 't9', projectId: 'p6', title: 'Streaming pipeline', description: 'Kafka -> Flink -> Pinot.', status: 'in-progress', priority: 'high', assigneeId: 'u7', dueDate: addDays(4), createdAt: addDays(-10), sla: 'at-risk', subtasks: [], comments: [], attachments: [] },
-  { id: 't10', projectId: 'p6', title: 'Dashboard MVP', description: 'Core charts and filters.', status: 'todo', priority: 'medium', assigneeId: 'u4', dueDate: addDays(14), createdAt: addDays(-1), sla: 'on-track', subtasks: [], comments: [], attachments: [] },
-  { id: 't11', projectId: 'p1', title: 'QA test plan', description: 'Write E2E test scenarios.', status: 'todo', priority: 'medium', assigneeId: 'u5', dueDate: addDays(8), createdAt: addDays(-2), sla: 'on-track', subtasks: [], comments: [], attachments: [] },
-  { id: 't12', projectId: 'p2', title: 'Onboarding emails', description: 'Lifecycle emails for new users.', status: 'done', priority: 'low', assigneeId: 'u6', dueDate: addDays(-10), createdAt: addDays(-40), sla: 'on-track', subtasks: [], comments: [], attachments: [] },
+export const mockTasks = [
+  {
+    projectId: "p1", // Design System Project
+    listId: 9,
+    listTitle: "Design Tasks",
+    sequence: 5000,
+    tasks: [
+      {
+        endDate: "2026-06-30",
+        listId: 9,
+        parentTaskId: null,
+        startDate: "2026-06-23",
+        subTask: [
+          {
+            subTaskId: 101,
+            subTaskTitle: "Audit existing components",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 102,
+            subTaskTitle: "Create Figma library",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 103,
+            subTaskTitle: "Build storybook",
+            subTaskStatus: "TODO"
+          }
+        ],
+        taskId: 15,
+        taskSequence: 10000,
+        taskStatus: "TODO",
+        taskTitle: "Design dashboard widgets"
+      },
+      {
+        endDate: "2026-07-07",
+        listId: 9,
+        parentTaskId: null,
+        startDate: "2026-06-25",
+        subTask: [
+          {
+            subTaskId: 104,
+            subTaskTitle: "Setup OAuth provider",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 105,
+            subTaskTitle: "Implement 2FA flow",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 106,
+            subTaskTitle: "Test authentication endpoints",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 107,
+            subTaskTitle: "Add refresh token logic",
+            subTaskStatus: "DONE"
+          }
+        ],
+        taskId: 16,
+        taskSequence: 10001,
+        taskStatus: "IN_PROGRESS",
+        taskTitle: "Integrate auth API"
+      }
+    ]
+  },
+  {
+    projectId: "P002", // Backend Migration Project
+    listId: 10,
+    listTitle: "Backend Tasks",
+    sequence: 6000,
+    tasks: [
+      {
+        endDate: "2026-07-15",
+        listId: 10,
+        parentTaskId: null,
+        startDate: "2026-06-20",
+        subTask: [
+          {
+            subTaskId: 108,
+            subTaskTitle: "Setup Lighthouse CI",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 109,
+            subTaskTitle: "Run performance tests",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 110,
+            subTaskTitle: "Optimize images",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 111,
+            subTaskTitle: "Fix Core Web Vitals",
+            subTaskStatus: "TODO"
+          }
+        ],
+        taskId: 17,
+        taskSequence: 20000,
+        taskStatus: "TODO",
+        taskTitle: "Performance audit"
+      },
+      {
+        endDate: "2026-07-01",
+        listId: 10,
+        parentTaskId: null,
+        startDate: "2026-06-18",
+        subTask: [
+          {
+            subTaskId: 112,
+            subTaskTitle: "Schema mapping",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 113,
+            subTaskTitle: "Run dry migration",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 114,
+            subTaskTitle: "Data validation",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 115,
+            subTaskTitle: "Production migration",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 116,
+            subTaskTitle: "Rollback plan",
+            subTaskStatus: "TODO"
+          }
+        ],
+        taskId: 18,
+        taskSequence: 20001,
+        taskStatus: "IN_PROGRESS",
+        taskTitle: "Customer data migration"
+      },
+      {
+        endDate: "2026-07-20",
+        listId: 10,
+        parentTaskId: null,
+        startDate: "2026-06-28",
+        subTask: [
+          {
+            subTaskId: 117,
+            subTaskTitle: "Design form UI",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 118,
+            subTaskTitle: "Add form validation",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 119,
+            subTaskTitle: "Implement multi-step",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 120,
+            subTaskTitle: "Connect to API",
+            subTaskStatus: "TODO"
+          }
+        ],
+        taskId: 19,
+        taskSequence: 20002,
+        taskStatus: "TODO",
+        taskTitle: "New contact form"
+      }
+    ]
+  },
+  {
+    projectId: "P003", // Mobile App Project
+    listId: 11,
+    listTitle: "Mobile Tasks",
+    sequence: 7000,
+    tasks: [
+      {
+        endDate: "2026-06-28",
+        listId: 11,
+        parentTaskId: null,
+        startDate: "2026-06-10",
+        subTask: [
+          {
+            subTaskId: 121,
+            subTaskTitle: "Get APNs certificate",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 122,
+            subTaskTitle: "Setup notification service",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 123,
+            subTaskTitle: "Handle push notifications",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 124,
+            subTaskTitle: "Test on real device",
+            subTaskStatus: "TODO"
+          }
+        ],
+        taskId: 20,
+        taskSequence: 30000,
+        taskStatus: "TODO",
+        taskTitle: "iOS push notifications"
+      },
+      {
+        endDate: "2026-07-10",
+        listId: 11,
+        parentTaskId: null,
+        startDate: "2026-06-15",
+        subTask: [
+          {
+            subTaskId: 125,
+            subTaskTitle: "Configure VPC",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 126,
+            subTaskTitle: "Setup peering connection",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 127,
+            subTaskTitle: "Update route tables",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 128,
+            subTaskTitle: "Security group rules",
+            subTaskStatus: "DONE"
+          }
+        ],
+        taskId: 21,
+        taskSequence: 30001,
+        taskStatus: "DONE",
+        taskTitle: "Set up VPC peering"
+      }
+    ]
+  },
+  {
+    projectId: "P004", // Infrastructure Project
+    listId: 12,
+    listTitle: "DevOps Tasks",
+    sequence: 8000,
+    tasks: [
+      {
+        endDate: "2026-07-12",
+        listId: 12,
+        parentTaskId: null,
+        startDate: "2026-06-22",
+        subTask: [
+          {
+            subTaskId: 129,
+            subTaskTitle: "Setup replica database",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 130,
+            subTaskTitle: "Configure failover",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 131,
+            subTaskTitle: "Test primary failure",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 132,
+            subTaskTitle: "Monitoring setup",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 133,
+            subTaskTitle: "Document process",
+            subTaskStatus: "TODO"
+          }
+        ],
+        taskId: 22,
+        taskSequence: 40000,
+        taskStatus: "IN_PROGRESS",
+        taskTitle: "Database failover test"
+      },
+      {
+        endDate: "2026-07-11",
+        listId: 12,
+        parentTaskId: null,
+        startDate: "2026-06-21",
+        subTask: [
+          {
+            subTaskId: 134,
+            subTaskTitle: "Setup Kafka cluster",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 135,
+            subTaskTitle: "Configure Flink",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 136,
+            subTaskTitle: "Setup Pinot",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 137,
+            subTaskTitle: "Data ingestion pipeline",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 138,
+            subTaskTitle: "Test streaming",
+            subTaskStatus: "TODO"
+          }
+        ],
+        taskId: 23,
+        taskSequence: 40001,
+        taskStatus: "IN_PROGRESS",
+        taskTitle: "Streaming pipeline"
+      },
+      {
+        endDate: "2026-07-25",
+        listId: 12,
+        parentTaskId: null,
+        startDate: "2026-06-30",
+        subTask: [
+          {
+            subTaskId: 139,
+            subTaskTitle: "Design charts",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 140,
+            subTaskTitle: "Add filters",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 141,
+            subTaskTitle: "Real-time data updates",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 142,
+            subTaskTitle: "Responsive design",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 143,
+            subTaskTitle: "Export functionality",
+            subTaskStatus: "TODO"
+          }
+        ],
+        taskId: 24,
+        taskSequence: 40002,
+        taskStatus: "TODO",
+        taskTitle: "Dashboard MVP"
+      }
+    ]
+  },
+  {
+    projectId: "P005", // QA Project
+    listId: 13,
+    listTitle: "QA Tasks",
+    sequence: 9000,
+    tasks: [
+      {
+        endDate: "2026-07-18",
+        listId: 13,
+        parentTaskId: null,
+        startDate: "2026-06-29",
+        subTask: [
+          {
+            subTaskId: 144,
+            subTaskTitle: "Write test scenarios",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 145,
+            subTaskTitle: "Setup Cypress",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 146,
+            subTaskTitle: "Write E2E tests",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 147,
+            subTaskTitle: "Integrate with CI/CD",
+            subTaskStatus: "TODO"
+          },
+          {
+            subTaskId: 148,
+            subTaskTitle: "Test reports",
+            subTaskStatus: "TODO"
+          }
+        ],
+        taskId: 25,
+        taskSequence: 50000,
+        taskStatus: "TODO",
+        taskTitle: "QA test plan"
+      },
+      {
+        endDate: "2026-06-21",
+        listId: 13,
+        parentTaskId: null,
+        startDate: "2026-06-01",
+        subTask: [
+          {
+            subTaskId: 149,
+            subTaskTitle: "Design email templates",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 150,
+            subTaskTitle: "Setup email service",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 151,
+            subTaskTitle: "Write email content",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 152,
+            subTaskTitle: "Test email delivery",
+            subTaskStatus: "DONE"
+          },
+          {
+            subTaskId: 153,
+            subTaskTitle: "Analytics tracking",
+            subTaskStatus: "DONE"
+          }
+        ],
+        taskId: 26,
+        taskSequence: 50001,
+        taskStatus: "DONE",
+        taskTitle: "Onboarding emails"
+      }
+    ]
+  }
 ];
 
 export const mockNotifications: Notification[] = [

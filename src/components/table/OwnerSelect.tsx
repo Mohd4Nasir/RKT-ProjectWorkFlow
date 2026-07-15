@@ -7,7 +7,7 @@ import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from '@/components/ui/command';
 import { UserAvatar } from '@/components/UserAvatar';
-import { User } from '@/types';
+import { User } from '@/types/ProejctAndTask';
 import { cn } from '@/lib/utils';
 
 interface OwnerSelectProps {

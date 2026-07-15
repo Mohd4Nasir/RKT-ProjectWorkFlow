@@ -1,16 +1,16 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { User } from '@/types';
+import { Users } from '@/types/ProejctAndTask';
 import { mockUsers } from '@/services/mockData';
 
-interface UsersState { items: User[]; }
+interface UsersState { items: Users[]; }
 const initialState: UsersState = { items: mockUsers };
 
 const slice = createSlice({
   name: 'users',
   initialState,
   reducers: {
-    addUser(state, a: PayloadAction<User>) { state.items.unshift(a.payload); },
-    updateUser(state, a: PayloadAction<User>) {
+    addUser(state, a: PayloadAction<Users>) { state.items.unshift(a.payload); },
+    updateUser(state, a: PayloadAction<Users>) {
       const i = state.items.findIndex((u) => u.id === a.payload.id);
       if (i >= 0) state.items[i] = a.payload;
     },

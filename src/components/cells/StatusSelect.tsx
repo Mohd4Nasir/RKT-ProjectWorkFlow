@@ -1,5 +1,5 @@
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
-import { ProjectStatus } from '@/types';
+import { ProjectStatus } from '@/types/ProejctAndTask';
 import { cn } from '@/lib/utils';
 
 const map: Record<ProjectStatus, { bg: string; text: string; label: string }> = {

@@ -50,7 +50,7 @@ export function InlineEdit({ value, onSave, className, inputClassName, placehold
       <button
         type="button"
         onClick={() => onClickWhenIdle ? onClickWhenIdle() : setEditing(true)}
-        className="text-left font-medium text-foreground hover:text-primary truncate flex-1"
+        className="text-left font-medium text-foreground hover:text-[#FF8E3C] truncate flex-1"
         title={value}
       >
         {value || <span className="text-muted-foreground italic">{placeholder}</span>}

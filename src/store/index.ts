@@ -1,3 +1,4 @@
+// src/store/index.ts
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import { persistReducer, persistStore, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
@@ -6,14 +7,24 @@ import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
 import auth from './slices/authSlice';
 import projects from './slices/projectsSlice';
 import tasks from './slices/tasksSlice';
+import taskLists from './slices/taskListsSlice'; // ✅ ADD THIS IMPORT
 import users from './slices/usersSlice';
 import notifications from './slices/notificationsSlice';
 import ui from './slices/uiSlice';
 
-const rootReducer = combineReducers({ auth, projects, tasks, users, notifications, ui });
+// ✅ ADD taskLists to rootReducer
+const rootReducer = combineReducers({ 
+  auth, 
+  projects, 
+  tasks, 
+  taskLists, // ✅ ADD THIS
+  users, 
+  notifications, 
+  ui 
+});
 
 const persisted = persistReducer(
-  { key: 'rishikirti', storage, whitelist: ['auth', 'ui'] },
+  { key: 'rishikirti', storage, whitelist: ['ui'] },
   rootReducer
 );
 
@@ -21,7 +32,9 @@ export const store = configureStore({
   reducer: persisted,
   middleware: (gDM) =>
     gDM({
-      serializableCheck: { ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER] },
+      serializableCheck: { 
+        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER] 
+      },
     }),
 });
 

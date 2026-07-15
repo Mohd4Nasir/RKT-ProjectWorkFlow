@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useEffect, useMemo, useState } from 'react';
 import { useAppSelector } from '@/store';
 import { PageHeader } from '@/components/PageHeader';
 import { StatCard } from '@/components/StatCard';
@@ -13,12 +14,17 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { Progress } from '@/components/ui/progress';
 import { AvatarStack, UserAvatar } from '@/components/UserAvatar';
 import { relativeTime, userById } from '@/utils/format';
+import { apiService } from '@/services/apiService';
 
 export default function Dashboard() {
   const user = useAppSelector((s) => s.auth.user!);
   const projects = useAppSelector((s) => s.projects.items);
   const tasks = useAppSelector((s) => s.tasks.items);
   const users = useAppSelector((s) => s.users.items);
+   // State for API test
+  const [apiResponse, setApiResponse] = useState<string>('');
+  const [apiLoading, setApiLoading] = useState(false);
+  const [apiError, setApiError] = useState<string>('');
 
   const isAdmin = user.role === 'admin';
   const myProjects = isAdmin ? projects : projects.filter((p) => p.members.includes(user.id));
@@ -52,6 +58,32 @@ export default function Dashboard() {
     { id: 'a4', userId: 'u8', text: 'updated “Nimbus Cloud Migration”', when: 'Yesterday' },
     { id: 'a5', userId: 'u4', text: 'joined “Vector Analytics”', when: '2d ago' },
   ];
+
+  
+  // ✅ API Test Call - useEffect mein
+  useEffect(() => {
+    const callHelloAPI = async () => {
+      setApiLoading(true);
+      setApiError('');
+      setApiResponse('');
+      
+      try {
+          console.log("Dashboard Render-------------");
+
+        const result = await apiService.getHello();
+        console.log('✅ API Response:', result);
+        setApiResponse(JSON.stringify(result, null, 2));
+      } catch (err: any) {
+        console.error('❌ API Error:', err);
+        setApiError(err.message || 'API call failed');
+      } finally {
+        setApiLoading(false);
+      }
+    };
+
+    // Call the API when dashboard loads
+    // callHelloAPI();
+  }, []); // Empty dependency array - runs once on mount
 
   return (
     <div className="space-y-6">
@@ -193,15 +225,15 @@ export default function Dashboard() {
                   <td className="px-3 py-3">
                     <div className="flex items-center gap-3">
                       <span className="h-9 w-9 rounded-lg grid place-items-center text-white font-bold text-xs" style={{ background: p.color }}>
-                        {p.name.split(' ').map(w => w[0]).slice(0,2).join('')}
+                        {p.projectTitle.split(' ').map(w => w[0]).slice(0,2).join('')}
                       </span>
                       <div>
-                        <div className="font-semibold">{p.name}</div>
+                        <div className="font-semibold">{p.projectTitle}</div>
                         <div className="text-[11px] text-muted-foreground">{p.tag}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-3"><StatusBadge value={p.status} /></td>
+                  <td className="px-3 py-3"><StatusBadge value={p.projectStatus} /></td>
                   <td className="px-3 py-3"><StatusBadge value={p.sla} /></td>
                   <td className="px-3 py-3 min-w-[160px]">
                     <div className="flex items-center gap-2">

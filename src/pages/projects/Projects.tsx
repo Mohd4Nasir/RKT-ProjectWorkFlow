@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { addProject, deleteProject, updateProject } from '@/store/slices/projectsSlice';
-import { Project } from '@/types';
+import { addProject, deleteProject, setProjects, updateProject } from '@/store/slices/projectsSlice';
+import { Project, PublicProject } from '@/types/ProejctAndTask';
 import { toast } from 'sonner';
 
 import { ProjectsHeader } from './ProjectsHeader';
@@ -18,7 +18,9 @@ import { ProjectStatsMap } from './ProjectStats';
 import {
   emptyFilterValues, useFilterState, useProjectsFilter,
 } from './hooks/useProjectsFilter';
-import { mockPublicProjects, PublicProject } from '@/services/publicProject';
+import { mockProjects, mockPublicProjects } from '@/services/mockData';
+import { projectApiService } from '@/services/projectsApiService';
+import { saveProjectToStorage } from '@/utils/projectStorage';
 
 interface Props { mine?: boolean; }
 
@@ -48,7 +50,7 @@ export default function Projects({ mine }: Props) {
   const baseProjects = mine ? allProjects.filter((p) => p.members.includes(me.id)) : allProjects;
   const tabFiltered = useMemo(() => baseProjects.filter((p) => p.status !== 'completed'), [baseProjects]);
 
-  const userOptions = useMemo(() => users.map((u) => ({ label: u.name, value: u.id })), [users]);
+  const userOptions = useMemo(() => users.map((u) => ({ label: u.name, value: String(u.id) })), [users]);
   const statusOptions = [
     { label: 'Active', value: 'active' },
     { label: 'In Progress', value: 'in-progress' },
@@ -81,6 +83,7 @@ export default function Projects({ mine }: Props) {
     { id: 'status', label: 'Status', type: 'select', options: statusOptions },
     { id: 'layout', label: 'Layout', type: 'select', options: layoutOptions },
     { id: 'projectAccess', label: 'Project Access', type: 'select', options: accessOptions },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [userOptions]);
 
   const filteredActive = useProjectsFilter({
@@ -122,7 +125,7 @@ export default function Projects({ mine }: Props) {
       const total = ts.length;
       const done = ts.filter((t) => t.status === 'done').length;
       const pct = total ? Math.round((done / total) * 100) : p.progress;
-      const seed = p.id.charCodeAt(p.id.length - 1) || 1;
+      const seed = p.id?.charCodeAt(p.id.length - 1) || 1;
       const milestones = (seed % 6);
       const mDone = Math.min(milestones, Math.floor((pct / 100) * milestones));
       const issues = total > 0 ? (seed % 4) : 0;
@@ -131,29 +134,95 @@ export default function Projects({ mine }: Props) {
     return map;
   }, [allProjects, allTasks]);
 
-  const onSave = (form: any) => {
-    if (editing) {
-      dispatch(updateProject({ ...editing, ...form }));
-      toast.success('Project updated');
-    } else {
-      dispatch(addProject({
-        id: 'p' + Date.now(),
-        name: form.name,
-        description: form.description,
-        status: form.status,
+  const loadProjects = async () => {
+    try {
+      const projectsResponse = await projectApiService.getProjects();
+      const projects = projectsResponse; // Assuming the API returns an object with a 'data' property containing the projects array.
+      const mappedProjects = projects.map((p: Project) => ({
+        id: String(p.projectId),
+        projectId: p.projectId,
+        projectTitle: p.projectTitle,
+        projectStatus: p.projectStatus,
+        name: p.projectTitle,
+        status: p.projectStatus?.toLowerCase() ?? 'active',
+        ownerId: String(p.ownerId),
+        ownerName: p.ownerName,
+        totalTask: p.totalTask,
+        completedTask: p.completedTask,
+        startDate: p.startDate,
+        endDate: p.endDate,
         progress: 0,
-        startDate: form.startDate,
-        endDate: form.endDate,
-        members: [me.id],
-        ownerId: me.id,
-        sla: 'on-track',
-        tag: form.tag || 'General',
-        color: 'hsl(261 38% 59%)',
+        members: [],
+        tag: '',
+        color: '#3b82f6',
       }));
-      toast.success('Project created');
+      console.log("Mapped Projects", mappedProjects);
+      // Redux update
+      dispatch(setProjects(mappedProjects));
+
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load projects');
     }
-    setOpen(false);
-    setEditing(null);
+  };
+
+    const projects = useAppSelector(state => state.projects.items);
+    // console.log('Projects state:', projects);
+
+ const handleProjectClick = async (projectId: string) => {
+  try {
+    console.log('Fetching project details:', projectId);
+const project = projects.find(p => String(p.projectId) === String(projectId));
+     console.log('Found project:', project);
+     saveProjectToStorage(project);
+    navigate(`/projects/${project.projectId}`, {
+      state: { project }  // 👈 Fixed: project object pass karo
+    });
+    
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    toast.error('Failed to load project');
+  }
+};
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const onSave = async (form: any) => {
+    try {
+      if (editing) {
+        const updated = await projectApiService.updateProject(editing.id, {
+          projectTitle: form.name,
+          projectDescription: form.description,
+          status: form.status,
+          startDate: form.startDate,
+          endDate: form.endDate,
+          tag: form.tag,
+        });
+        dispatch(updateProject(updated));
+        toast.success('Project updated');
+      } else {
+        const newProject = await projectApiService.createProjectTask({
+          projectTitle: form.name,
+          projectDescription: form.description,
+          // status: form.status,
+          startDate: form.startDate,
+          endDate: form.endDate,
+          // ownerId: me.id,
+          members: [me.id],
+          // tag: form.tag || 'General',
+        });
+        console.log('Created project:', newProject);
+        dispatch(addProject(newProject));
+        toast.success('Project created');
+      }
+      setOpen(false);
+      setEditing(null);
+    } catch (error) {
+      console.error('Save error:', error);
+      toast.error('Failed to save project');
+    }
   };
 
   const isActive = tab === 'active';
@@ -167,10 +236,10 @@ export default function Projects({ mine }: Props) {
   return (
     <div className="space-y-4">
       <ProjectsHeader
-        title={mine ? 'My Projects' : 'Projects'}
+        title={' Projects'}
         tabs={[
           { id: 'active', label: 'Active Projects' },
-          { id: 'public', label: 'Public Projects' },
+          // { id: 'public', label: 'Public Projects' },
         ]}
         value={tab}
         onChange={(v) => { setTab(v as 'active' | 'public'); setPage(1); }}
@@ -188,7 +257,7 @@ export default function Projects({ mine }: Props) {
         onCreate={() => { setEditing(null); setOpen(true); }}
       />
 
-      {isActive ? (
+     
         <>
           {filteredActive.length === 0 ? (
             <ProjectEmptyState />
@@ -198,9 +267,10 @@ export default function Projects({ mine }: Props) {
               users={users}
               stats={stats}
               onEdit={(p) => { setEditing(p); setOpen(true); }}
-              onDelete={(id) => { dispatch(deleteProject(id)); toast.success('Project deleted'); }}
+              onDelete={(id) => { dispatch(deleteProject( id)); toast.success('Project deleted'); }}
               onUpdate={(p) => dispatch(updateProject(p))}
               onOpenTasks={(p) => navigate(`/projects/${p.id}`)}
+              onProjectClick={handleProjectClick}
             />
           ) : (
             <ProjectsGrid
@@ -220,7 +290,7 @@ export default function Projects({ mine }: Props) {
             onPageSizeChange={setPageSize}
           />
         </>
-      ) : (
+      {/* ) : (
         <PublicProjectsTable
           projects={filteredPublic}
           users={users}
@@ -229,7 +299,7 @@ export default function Projects({ mine }: Props) {
             toast.success('Project joined');
           }}
         />
-      )}
+      )} */}
 
       <ProjectsFilterDrawer
         open={filterOpen}

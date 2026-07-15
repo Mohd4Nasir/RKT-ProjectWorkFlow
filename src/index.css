@@ -7,7 +7,10 @@
 @layer base {
   :root {
     /* Brand */
-    --background: 260 60% 96%;          /* #E8E2F8 lavender bg */
+    --background: 260 60% 98%;
+    /* #F5F5F5 */
+
+    /* --background: 260 60% 98%;        */
     --foreground: 260 25% 15%;
     --surface: 0 0% 100%;
 
@@ -18,9 +21,14 @@
     --popover-foreground: 260 25% 15%;
 
     /* Primary purple #886CC0 */
-    --primary: 261 38% 59%;
-    --primary-foreground: 0 0% 100%;
-    --primary-hover: 273 67% 39%;       /* #6B21A5 */
+    --primary: 358 70% 85%
+      /* #EEBBC3 */
+    ;
+    --primary-foreground: #111827;
+    /* Dark text */
+    --primary-hover: 344 85% 72%;
+    /* Slightly darker hover */
+    /* #6B21A5 */
     --primary-soft: 261 60% 92%;
 
     --secondary: 260 40% 94%;
@@ -32,11 +40,14 @@
     --accent: 261 60% 92%;
     --accent-foreground: 273 67% 39%;
 
-    --success: 160 84% 39%;             /* #10B981 */
+    --success: 160 84% 39%;
+    /* #10B981 */
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;              /* #F59E0B */
+    --warning: 38 92% 50%;
+    /* #F59E0B */
     --warning-foreground: 0 0% 100%;
-    --danger: 0 84% 60%;                /* #EF4444 */
+    --danger: 0 84% 60%;
+    /* #EF4444 */
     --danger-foreground: 0 0% 100%;
     --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
@@ -51,11 +62,15 @@
     --radius: 0.875rem;
 
     /* Sidebar - deep purple brand */
-    --sidebar-background: 270 45% 22%;            /* deep purple */
+    --sidebar-background: 270 45% 22%;
+    /* deep purple */
     --sidebar-foreground: 260 30% 88%;
-    --sidebar-primary: 265 47% 96%;                /* #F3F0F8 active pill bg */
-    --sidebar-primary-foreground: 261 38% 59%;     /* #886CC0 active text */
-    --sidebar-accent: 270 40% 30%;                 /* hover */
+    --sidebar-primary: 265 47% 96%;
+    /* #F3F0F8 active pill bg */
+    --sidebar-primary-foreground: 261 38% 59%;
+    /* #886CC0 active text */
+    --sidebar-accent: 270 40% 30%;
+    /* hover */
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 270 35% 28%;
     --sidebar-ring: 261 50% 70%;
@@ -120,24 +135,53 @@
 }
 
 @layer base {
-  * { @apply border-border; }
-  html, body, #root { height: 100%; }
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
-    font-feature-settings: "cv02","cv03","cv04","cv11";
+    font-family: '-apple-system', system-ui, sans-serif, "BlinkMacSystemFont", "Segoe UI", "Inter", "Roboto";
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
-  h1,h2,h3,h4,h5 { font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; @apply tracking-tight; }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    font-family: 'Plus Jakarta Sans', 'BlinkMacSystemFont', 'Segoe UI', '-apple-system', 'Inter', sans-serif;
+    @apply tracking-tight;
+  }
 }
+
+
+
+
 
 @layer components {
   .card-elevated {
     @apply bg-card rounded-2xl border border-border/60;
     box-shadow: var(--shadow);
   }
+
   .stat-icon {
     @apply h-11 w-11 rounded-xl grid place-items-center;
   }
-  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 8px; }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 8px;
+  }
 }
