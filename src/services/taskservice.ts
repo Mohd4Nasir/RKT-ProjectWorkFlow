@@ -1,158 +1,3 @@
-// import axiosInstance from "./axiosInstance";
-
-// /* =========================
-//    TASK LIST DTOs
-// ========================= */
-
-// export interface CreateTaskListDto {
-//   projectId: number;
-//   listTitle: string;
-// }
-
-// export interface UpdateTaskListDto {
-//   listTitle: string;
-// }
-
-// /* =========================
-//    TASK DTOs
-// ========================= */
-
-// export interface CreateTaskDto {
-//   listId: number;
-//   taskTitle: string;
-//   description?: string;
-//   startDate?: string;
-//   endDate?: string;
-//   priority?: string;
-// }
-
-// export interface UpdateTaskDto {
-//   taskTitle?: string;
-//   description?: string;
-//   startDate?: string;
-//   endDate?: string;
-//   priority?: string;
-//   status?: string;
-// }
-
-// /* =========================
-//    TASK LIST APIs
-// ========================= */
-
-// export const taskService = {
- 
-// createTaskList: async (
-//   data: CreateTaskListDto
-// ) => {
-//   try {
-//     const response = await axiosInstance.post(
-//       "/task/list/create",
-//       {
-//         projectId: data.projectId,
-//         listTitle: data.listTitle,
-//       }
-//     );
-
-//     return response.data;
-//   } catch (error) {
-//     console.error("Create task list error:", error);
-//     throw error;
-//   }
-// },
-
-//   // Update List
-//   updateTaskList: async (
-//     listId: number,
-//     listtitle : string
-//   ) => {
-//     const response = await axiosInstance.put(
-//       `/task/list/update/${listId}`,
-//       listtitle
-//     );
-
-//     return response.data;
-//   },
-
-//   // Delete List
-//   deleteTaskList: async (listId: number) => {
-//     const response = await axiosInstance.delete(
-//       `/task/list/delete/${listId}`
-//     );
-
-//     return response.data;
-//   },
-
-//   /* =========================
-//      TASK APIs
-//   ========================= */
-
-//   // Create Task
-//   createTask: async (data: CreateTaskDto) => {
-//     console.log("Creating task with data:", data);
-//     const response = await axiosInstance.post(
-//       "/task/create",
-//       data
-//     );
-
-//     return response.data;
-//   },
-
-//   // Update Task
-//   updateTask: async (
-//     taskId: number,
-//     data: UpdateTaskDto
-//   ) => {
-//     const response = await axiosInstance.put(
-//       `/task/update/${taskId}`,
-//       data
-//     );
-
-//     return response.data;
-//   },
-
-//   // Delete Task
-//   deleteTask: async (taskId: number) => {
-//     const response = await axiosInstance.delete(
-//       `/task/delete/${taskId}`
-//     );
-
-//     return response.data;
-//   },
-
-//   // Get Task By Id
-//   getTaskById: async (taskId: number) => {
-//     const response = await axiosInstance.get(
-//       `/task/${taskId}`
-//     );
-
-//     return response.data;
-//   },
-
-//   // Get Tasks By List
-//   getTasksByListId: async (listId: number) => {
-//     const response = await axiosInstance.get(
-//       `/task/list/${listId}`
-//     );
-
-//     return response.data;
-//   },
-
-//  // In your taskService file, add:
-
-// createTaskAtPosition: async (payload: {
-//   taskTitle: string;
-//   taskDescription?: string;
-//   taskStartDate?: string;
-//   taskEndDate?: string;
-//   refTaskId: number | string;
-//   isAbove: boolean;
-// }) => {
-//   const response = await axiosInstance.post('/task/create-at-position', payload);
-//   return response.data;
-// }, 
-// };
-
-
 import axiosInstance from "./axiosInstance";
 
 /* =========================
@@ -214,10 +59,23 @@ export interface CreateTaskListAtPositionDto {
 }
 
 /* =========================
+   TASK MEMBER / CONTRIBUTOR DTOs
+========================= */
+
+export interface AssignTaskMemberDto {
+  userId: string | number;
+  taskId: string | number;
+  taskMemberRole: string; // e.g. "PRIMARY_ASSIGNEE"
+}
+
+/* =========================
    TASK LIST APIs
 ========================= */
 
 export const taskService = {
+  /* =========================
+     TASK  List APIs
+  ========================= */
   createTaskList: async (data: CreateTaskListDto) => {
     try {
       const response = await axiosInstance.post("/task/list/create", {
@@ -230,11 +88,28 @@ export const taskService = {
       throw error;
     }
   },
+  // Create List Above / Below a reference list
+  createTaskListAtPosition: async (payload: CreateTaskListAtPositionDto) => {
+    console.log("Task List", payload);
+    try {
+      const response = await axiosInstance.post(
+        "/task/list/create-at-position",
+        payload,
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Create task list at position error:", error);
+      throw error;
+    }
+  },
 
   // Update List — accepts a partial DTO object, not a bare string
   updateTaskList: async (listId: string | number, data: UpdateTaskListDto) => {
     try {
-      const response = await axiosInstance.put(`/task/list/update/${listId}`, data);
+      const response = await axiosInstance.put(
+        `/task/list/update/${listId}`,
+        data,
+      );
       return response.data;
     } catch (error) {
       console.error("Update task list error:", error);
@@ -245,22 +120,12 @@ export const taskService = {
   // Delete List
   deleteTaskList: async (listId: string | number) => {
     try {
-      const response = await axiosInstance.delete(`/task/list/delete/${listId}`);
+      const response = await axiosInstance.delete(
+        `/task/list/delete/${listId}`,
+      );
       return response.data;
     } catch (error) {
       console.error("Delete task list error:", error);
-      throw error;
-    }
-  },
-
-  // Create List Above / Below a reference list
-  createTaskListAtPosition: async (payload: CreateTaskListAtPositionDto) => {
-    console.log("Task List",payload)
-    try {
-      const response = await axiosInstance.post("/task/list/create-at-position", payload);
-      return response.data;
-    } catch (error) {
-      console.error("Create task list at position error:", error);
       throw error;
     }
   },
@@ -271,7 +136,7 @@ export const taskService = {
 
   // Create Task
   createTask: async (data: CreateTaskDto) => {
-    console.log("Add task ya sub task ",data)
+    console.log("Add task ya sub task ", data);
     try {
       const response = await axiosInstance.post("/task/create", {
         projectId: data.projectId,
@@ -288,7 +153,20 @@ export const taskService = {
       throw error;
     }
   },
-
+  // Create Task Above / Below a reference task
+  createTaskAtPosition: async (payload: CreateTaskAtPositionDto) => {
+    console.log(" ther is add task ", payload);
+    try {
+      const response = await axiosInstance.post(
+        "/task/create-at-position",
+        payload,
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Create task at position error:", error);
+      throw error;
+    }
+  },
   // Update Task
   updateTask: async (taskId: string | number, data: UpdateTaskDto) => {
     try {
@@ -332,14 +210,70 @@ export const taskService = {
     return response.data;
   },
 
-  // Create Task Above / Below a reference task
-  createTaskAtPosition: async (payload: CreateTaskAtPositionDto) => {
-    console.log(" ther is add task ",payload)
+  // Get Task Board (used to open Task Detail Panel — full details for a single task)
+  getTaskBoard: async (taskId: string | number) => {
     try {
-      const response = await axiosInstance.post("/task/create-at-position", payload);
-      return response.data;
+      const response = await axiosInstance.get(`/task/${taskId}/board`);
+      return response.data; // { data: {...}, success, message, ... }
     } catch (error) {
-      console.error("Create task at position error:", error);
+      console.error("Get task board error:", error);
+      throw error;
+    }
+  },
+  getSubtaskInTaskDeatils: async (taskId: string | number) => {
+    try {
+      const res = await axiosInstance.get(`/task/${taskId}/full-tree`);
+      console.log("taskService sub task", res);
+      return res.data.data;
+    } catch (error) {
+      console.error("Create Task at positons", error);
+    }
+  },
+
+  /* =========================
+     TASK MEMBER / CONTRIBUTOR APIs
+  ========================= */
+
+  // Get current contributors on a task
+  getTaskMembers: async (taskId: number | string) => {
+    const res = await axiosInstance.get(`/task/${taskId}/task-member`);
+    return res.data.data;
+  },
+
+  // Roles selectable for a task member — GET /task/roles
+  getTaskMemberRoles: async () => {
+    try {
+      const res = await axiosInstance.get(`/task/roles`);
+      return res.data.data;
+    } catch (error) {
+      console.error("Get task member roles error:", error);
+      throw error;
+    }
+  },
+
+  // Users who are NOT yet a contributor on this task, i.e. eligible to be added
+  getNotAssignedMembers: async (taskId: number | string) => {
+    try {
+      const res = await axiosInstance.get(`/task/${taskId}/not-assigned-member`);
+      return res.data.data;
+    } catch (error) {
+      console.error("Get not-assigned members error:", error);
+      throw error;
+    }
+  },
+
+  // Assign (add) a user to a task with a role, or re-assign/change an existing member's role —
+  // same endpoint handles both since it's keyed by userId + taskId
+  assignTaskMember: async (data: AssignTaskMemberDto) => {
+    try {
+      const res = await axiosInstance.post(`/task/assign-task`, {
+        userId: data.userId,
+        taskId: data.taskId,
+        taskMemberRole: data.taskMemberRole,
+      });
+      return res.data.data;
+    } catch (error) {
+      console.error("Assign task member error:", error);
       throw error;
     }
   },

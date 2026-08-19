@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Users } from '@/types/ProejctAndTask';
+import { Users } from '@/types/ProejctsType';
 import { mockUsers } from '@/services/mockData';
 
 interface UsersState { items: Users[]; }

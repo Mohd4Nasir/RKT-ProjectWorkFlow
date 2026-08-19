@@ -84,7 +84,7 @@ const App = () => (
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/projects" element={<ProtectedRoute roles={['admin']}><Projects /></ProtectedRoute>} />
                   <Route path="/projects/:id" element={<ProjectDetails />} />
-                  <Route path="/my-projects" element={<Projects mine />} />
+                  <Route path="/my-projects" element={<Projects  />} />
                   <Route path="/tasks" element={<ProtectedRoute roles={['admin']}><Tasks /></ProtectedRoute>} />
                   <Route path="/my-tasks" element={<Tasks mine />} />
                   <Route path="/users" element={<ProtectedRoute roles={['admin']}><Users /></ProtectedRoute>} />

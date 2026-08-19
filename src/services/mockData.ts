@@ -1,4 +1,4 @@
-import { Project, Task, Users, Notification, ActivityItem, PublicProject } from '@/types/ProejctAndTask';
+import { Project, Task, Users, Notification, ActivityItem, PublicProject } from '@/types/ProejctsType';
 
 export const mockUsers: Users[] = [
   { id: 1, name: 'Aarav Sharma', email: 'aarav@rishikirti.com', role: 'admin', department: 'Engineering', status: 'active', joinedAt: '2023-04-12' },
@@ -675,7 +675,37 @@ export const mockTasks = [
     ]
   }
 ];
+// Flat task list matching the shape Tasks.tsx expects
+const statusMap: Record<string, 'todo' | 'in-progress' | 'done'> = {
+  TODO: 'todo',
+  IN_PROGRESS: 'in-progress',
+  DONE: 'done',
+};
 
+const assigneePool = ['1', '2', '3', '4', '5', '6', '7', '8'];
+const priorityPool: Array<'high' | 'medium' | 'low'> = ['high', 'medium', 'low'];
+
+export const mockFlatTasks = mockTasks.flatMap((group) =>
+  group.tasks.map((t, i) => ({
+    id: String(t.taskId),
+    title: t.taskTitle,
+    description: '',
+    status: statusMap[t.taskStatus] ?? 'todo',
+    priority: priorityPool[(t.taskId + i) % priorityPool.length],
+    projectId: group.projectId,
+    assigneeId: assigneePool[t.taskId % assigneePool.length],
+    dueDate: t.endDate,
+    createdAt: t.startDate,
+    sla: 'on-track' as const,
+    subtasks: t.subTask.map((s) => ({
+      id: String(s.subTaskId),
+      title: s.subTaskTitle,
+      done: s.subTaskStatus === 'DONE',
+    })),
+    comments: [],
+    attachments: [],
+  }))
+);
 export const mockNotifications: Notification[] = [
   { id: 'n1', type: 'assigned', title: 'New task assigned', description: '“Design dashboard widgets” was assigned to you', createdAt: addDays(0), read: false, link: '/tasks' },
   { id: 'n2', type: 'deadline', title: 'Deadline tomorrow', description: '“Customer data migration” is due in 24 hours', createdAt: addDays(0), read: false, link: '/tasks' },

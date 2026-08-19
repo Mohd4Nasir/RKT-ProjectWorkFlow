@@ -11,7 +11,7 @@ import { Globe, Lock, LucideIcon, Users as UsersIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/UserAvatar';
 import { userById } from '@/utils/format';
-import { Users } from '@/types/ProejctAndTask';
+import { Users } from '@/types/ProejctsType';
 import { PublicProject } from '@/services/publicProject';
 import { ProjectActionCell } from './ProjectActionCell';
 import { Button } from '@/components/ui/button';

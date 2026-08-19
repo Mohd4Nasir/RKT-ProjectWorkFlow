@@ -7,9 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import { Badge } from '@/components/ui/badge';
-import { Project, Users } from '@/types/ProejctAndTask';
+import { Project, Users } from '@/types/ProejctsType';
 import { useAppSelector } from '@/store';
-import { UserAvatar } from '@/components/UserAvatar';
 import { RichTextEditor } from '@/components/richeditor';
 import { Briefcase, Calendar, Globe2, Lock, Sparkles, Tag, Users2, Building2, File } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -21,7 +20,6 @@ interface Props {
   onSave: (form: FormState) => void;
 }
 
-type Access = 'public' | 'private';
 
 interface FormState {
   name: string;
@@ -35,25 +33,7 @@ interface FormState {
   // company: string;
 }
 
-const STATUSES = [
-  { value: 'active', label: 'Active', dot: 'bg-emerald-500' },
-  { value: 'in-progress', label: 'In Progress', dot: 'bg-blue-500' },
-  { value: 'on-hold', label: 'On Hold', dot: 'bg-amber-500' },
-  { value: 'delayed', label: 'Delayed', dot: 'bg-red-500' },
-  { value: 'completed', label: 'Completed', dot: 'bg-zinc-500' },
-];
 
-const COMPANIES = [
-  'RishiKirti Technologies',
-  'Atlas Financial Group',
-  'Helios Solutions',
-  'Orbit Mobility',
-  'Nimbus Cloud Inc.',
-  'Lumen Media',
-  'Vector Data Labs',
-];
-
-const TAG_SUGGESTIONS = ['Fintech', 'SaaS', 'Mobile', 'DevOps', 'Web', 'Data', 'AI/ML'];
 
 const empty = (ownerId: string): FormState => ({
   name: '', description: '', status: 'active', startDate: '', endDate: '',
@@ -128,7 +108,7 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
         <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8" style={{ background: '#ffffff' }}>
           {/* Project Name */}
           <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: '#001858' }}>
+            <Label className="text-sm font-semibold text-[#001858]">
               Project Name <span style={{ color: '#f582ae' }}>*</span>
             </Label>
             <div className="relative">
@@ -137,7 +117,7 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
                 value={form.name}
                 onChange={(e) => set('name', e.target.value)}
                 placeholder="Enter project name..."
-                className="h-12 px-4 text-base transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="h-12 px-4 text-base transition-all  text-[#001858] duration-200 focus-visible:ring-0 focus-visible:ring-offset-0"
                 style={{
                   border: '2px solid #f3d2c1',
                   background: '#ffffff',
@@ -156,12 +136,10 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
           {/* Description */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-semibold" style={{ color: '#001858' }}>Description</Label>
-              <span className="text-[10px] uppercase tracking-wider" style={{ color: '#001858' }}>
-                Rich Text
-              </span>
+              <Label className="text-sm font-semibold text-[#001858]" >Description</Label>
+             
             </div>
-            <div className="rounded-xl overflow-hidden" style={{ border: '2px solid #f3d2c1', borderRadius: '12px' }}>
+            <div className="rounded-xl overflow-hidden border-[#f3d2c1] " style={{ border: '2px solid #f3d2c1', borderRadius: '12px' }}>
               <RichTextEditor
                 value={form.description}
                 onChange={(v) => set('description', v)}

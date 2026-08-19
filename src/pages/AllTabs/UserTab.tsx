@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserPlus, Search, X, LayoutList, LayoutGrid, Users } from 'lucide-react';
 import { Crown, Star, UserMinus, Mail, Building2 } from 'lucide-react';
 
-import { UserTable } from '@/components/tabs/UserTabTable';
+import { UserTable } from '@/pages/Team/UserTabTable';
 import { AddMemberDialog } from '@/components/User/AddUserDropdown';
 import { RemoveMemberDialog } from '@/components/User/RemoveMemberDialog';
 import {

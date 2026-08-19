@@ -29,18 +29,18 @@ export function ProjectsToolbar({
       right={
         <>
           {showViewToggle && (
-            <div className="inline-flex rounded-md border border-border bg-card p-0.5">
+            <div className="inline-flex rounded-md border border-border bg-card ">
               <button
                 onClick={() => onViewChange?.('list')}
-                className={cn('h-8 px-3 rounded text-xs font-medium inline-flex items-center gap-1.5',
-                  view === 'list' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground')}
+                className={cn('h-8 px-3  rounded-l-md text-xs font-medium inline-flex items-center gap-1.5',
+                  view === 'list' ? 'bg-primary/60 text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
               >
                 <List className="h-3.5 w-3.5" /> List
               </button>
               <button
                 onClick={() => onViewChange?.('grid')}
-                className={cn('h-8 px-3 rounded text-xs font-medium inline-flex items-center gap-1.5',
-                  view === 'grid' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground')}
+                className={cn('h-8 px-3 rounded-r-md text-xs font-medium inline-flex items-center gap-1.5',
+                  view === 'grid' ? 'bg-primary/60 text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
               >
                 <LayoutGrid className="h-3.5 w-3.5" /> Grid
               </button>
@@ -49,7 +49,7 @@ export function ProjectsToolbar({
 
           {showCreate && (
             <Button
-              className="bg-primary hover:bg-primary-hover text-primary-foreground shadow"
+              className="shadow"
               onClick={onCreate}
             >
               <Plus className="h-4 w-4 mr-1" /> New Project

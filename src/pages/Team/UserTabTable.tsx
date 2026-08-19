@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, X, Crown, Star, UserMinus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
-import { UserAvatar } from '../UserAvatar';
+import { UserAvatar } from '../../components/UserAvatar';
 import { rollupVersion } from 'vite';
 
 interface UserTableProps {

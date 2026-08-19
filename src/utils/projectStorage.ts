@@ -2,7 +2,7 @@
 // utils/projectStorage.ts
 // ==========================================
 
-import { Project } from "@/types/ProejctAndTask";
+import { Project } from "@/types/ProejctsType";
 
 export const saveProjectToStorage = (project: Project) => {
   try {

@@ -60,85 +60,88 @@
 
 
 // store/slices/taskListsSlice.ts
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+// import { TaskList } from '@/types/ProejctAndTask';
+// import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-// ─── Normalized shape stored in Redux ─────────────────────────────────────────
-// NOTE: DO NOT import TaskList from ProejctAndTask.ts here.
-// That type is the API response shape. Redux uses this flat shape.
-export interface ReduxTaskList {
-  id: string;
-  name: string;
-  projectId: string;
-  order: number;
-  createdAt?: string;
-}
+// // ─── Normalized shape stored in Redux ─────────────────────────────────────────
+// // NOTE: DO NOT import TaskList from ProejctAndTask.ts here.
+// // That type is the API response shape. Redux uses this flat shape.
+// export interface ReduxTaskList {
+//   id: string;
+//   name: string;
+//   projectId: string;
+//   order: number;
+//   createdAt?: string;
+// }
 
-interface TaskListsState {
-  items: ReduxTaskList[];
-}
+// const mappedList: TaskList[] = [];
 
-const initialState: TaskListsState = { items: [] };
+// interface TaskListsState {
+//   items: ReduxTaskList[];
+// }
 
-const taskListsSlice = createSlice({
-  name: 'taskLists',
-  initialState,
-  reducers: {
-    addTaskList(state, action: PayloadAction<ReduxTaskList>) {
-      const maxOrder = state.items.length
-        ? Math.max(...state.items.map(tl => tl.order ?? 0))
-        : -1;
-      state.items.push({ ...action.payload, order: maxOrder + 1 });
-    },
+// const initialState: TaskListsState = { items: [] };
 
-    updateTaskList(state, action: PayloadAction<ReduxTaskList>) {
-      const idx = state.items.findIndex(tl => tl.id === action.payload.id);
-      if (idx >= 0) state.items[idx] = action.payload;
-    },
+// const taskListsSlice = createSlice({
+//   name: 'taskLists',
+//   initialState,
+//   reducers: {
+//     addTaskList(state, action: PayloadAction<ReduxTaskList>) {
+//       const maxOrder = state.items.length
+//         ? Math.max(...state.items.map(tl => tl.order ?? 0))
+//         : -1;
+//       state.items.push({ ...action.payload, order: maxOrder + 1 });
+//     },
 
-    deleteTaskList(state, action: PayloadAction<string>) {
-      state.items = state.items.filter(tl => tl.id !== action.payload);
-    },
+//     updateTaskList(state, action: PayloadAction<ReduxTaskList>) {
+//       const idx = state.items.findIndex(tl => tl.id === action.payload.id);
+//       if (idx >= 0) state.items[idx] = action.payload;
+//     },
 
-    reorderTaskLists(
-      state,
-      action: PayloadAction<{ projectId: string; orderedIds: string[] }>
-    ) {
-      const { projectId, orderedIds } = action.payload;
-      orderedIds.forEach((id, idx) => {
-        const tl = state.items.find(
-          x => x.id === id && String(x.projectId) === String(projectId)
-        );
-        if (tl) tl.order = idx * 10;
-      });
-    },
+//     deleteTaskList(state, action: PayloadAction<string>) {
+//       state.items = state.items.filter(tl => tl.id !== action.payload);
+//     },
 
-    // Called after API fetch — replaces all lists for a project
-    setTaskLists(state, action: PayloadAction<ReduxTaskList[]>) {
-      // Keep lists from OTHER projects, replace lists from this project
-      if (action.payload.length > 0) {
-        const projectId = action.payload[0].projectId;
-        state.items = [
-          ...state.items.filter(tl => tl.projectId !== projectId),
-          ...action.payload,
-        ];
-      } else {
-        state.items = action.payload;
-      }
-    },
+//     reorderTaskLists(
+//       state,
+//       action: PayloadAction<{ projectId: string; orderedIds: string[] }>
+//     ) {
+//       const { projectId, orderedIds } = action.payload;
+//       orderedIds.forEach((id, idx) => {
+//         const tl = state.items.find(
+//           x => x.id === id && String(x.projectId) === String(projectId)
+//         );
+//         if (tl) tl.order = idx * 10;
+//       });
+//     },
 
-    clearTaskLists(state) {
-      state.items = [];
-    },
-  },
-});
+//     // Called after API fetch — replaces all lists for a project
+//     setTaskLists(state, action: PayloadAction<ReduxTaskList[]>) {
+//       // Keep lists from OTHER projects, replace lists from this project
+//       if (action.payload.length > 0) {
+//         const projectId = action.payload[0].projectId;
+//         state.items = [
+//           ...state.items.filter(tl => tl.projectId !== projectId),
+//           ...action.payload,
+//         ];
+//       } else {
+//         state.items = action.payload;
+//       }
+//     },
 
-export const {
-  addTaskList,
-  updateTaskList,
-  deleteTaskList,
-  reorderTaskLists,
-  setTaskLists,
-  clearTaskLists,
-} = taskListsSlice.actions;
+//     clearTaskLists(state) {
+//       state.items = [];
+//     },
+//   },
+// });
 
-export default taskListsSlice.reducer;
+// export const {
+//   addTaskList,
+//   updateTaskList,
+//   deleteTaskList,
+//   reorderTaskLists,
+//   setTaskLists,
+//   clearTaskLists,
+// } = taskListsSlice.actions;
+
+// export default taskListsSlice.reducer;

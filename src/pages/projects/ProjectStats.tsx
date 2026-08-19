@@ -1,4 +1,4 @@
-import { Project } from '@/types/ProejctAndTask';
+import { Project } from '@/types/ProejctsType';
 
 export interface ProjectStat {
   total: number; done: number; pct: number;

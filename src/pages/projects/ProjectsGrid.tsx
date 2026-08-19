@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/StatusBadge';
 import { UserAvatar } from '@/components/UserAvatar';
 import { ProjectStatusPill } from '@/components/cells/StatusSelect';
-import { Project } from '@/types/ProejctAndTask';
+import { Project } from '@/types/ProejctsType';
 import { userById } from '@/utils/format';
 import { CountBar } from './CountBar';
 import { ProjectStatsMap } from './ProjectStats';

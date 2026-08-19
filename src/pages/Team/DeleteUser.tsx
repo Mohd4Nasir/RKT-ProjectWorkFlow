@@ -8,7 +8,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { User } from '@/types/ProejctAndTask';
+import { User } from '@/types/ProejctsType';
 import { toast } from 'sonner';
 
 interface DeleteUserProps {

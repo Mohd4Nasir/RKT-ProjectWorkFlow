@@ -126,144 +126,145 @@
 
 
 // store/slices/tasksSlice.ts
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+// import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-export interface ReduxTask {
-  startDate: import("react/jsx-runtime").JSX.Element;
-  id: string;
-  taskListId: string;
-  projectId: string;
-  parentTaskId: string | null;
-  taskName: string;
-  title: string;
-  taskDescription?: string;
-  description?: string;
-  status: 'todo' | 'in-progress' | 'done';
-  priority?: 'low' | 'medium' | 'high' | 'critical';
-  taskStartDate?: string;
-  taskEndDate?: string;
-  dueDate?: string;
-  assigneeId?: string;
-  order: number;
-  createdAt?: string;
-}
+// export interface ReduxTask {
+//   startDate: import("react/jsx-runtime").JSX.Element;
+//   id: string;
+//   taskListId: string;
+//   projectId: string;
+//   parentTaskId: string | null;
+//   taskName: string;
+//   title: string;
+//   taskDescription?: string;
+//   description?: string;
+//   status: 'todo' | 'in-progress' | 'done';
+//   priority?: 'low' | 'medium' | 'high' | 'critical';
+//   taskStartDate?: string;
+//   taskEndDate?: string;
+//   dueDate?: string;
+//   assigneeId?: string;
+//   order: number;
+//   createdAt?: string;
+// }
 
-interface TasksState {
-  items: ReduxTask[];
-}
+// interface TasksState {
+//   [x: string]: any[];
+//   items: ReduxTask[];
+// }
 
-const initialState: TasksState = { items: [] };
+// const initialState: TasksState = { items: [] };
 
-// Recursively collect a task ID + all its descendants
-function collectDescendantIds(items: ReduxTask[], rootId: string): string[] {
-  const ids: string[] = [rootId];
-  const children = items.filter(t => t.parentTaskId === rootId);
-  children.forEach(child => {
-    ids.push(...collectDescendantIds(items, child.id));
-  });
-  return ids;
-}
+// // Recursively collect a task ID + all its descendants
+// function collectDescendantIds(items: ReduxTask[], rootId: string): string[] {
+//   const ids: string[] = [rootId];
+//   const children = items.filter(t => t.parentTaskId === rootId);
+//   children.forEach(child => {
+//     ids.push(...collectDescendantIds(items, child.id));
+//   });
+//   return ids;
+// }
 
-const tasksSlice = createSlice({
-  name: 'tasks',
-  initialState,
-  reducers: {
-    addTask(
-      state,
-      action: PayloadAction<ReduxTask & { insertAfterId?: string | null }>
-    ) {
-      const { insertAfterId, ...task } = action.payload;
+// const tasksSlice = createSlice({
+//   name: 'taskss',
+//   initialState,
+//   reducers: {
+//     addTask(
+//       state,
+//       action: PayloadAction<ReduxTask & { insertAfterId?: string | null }>
+//     ) {
+//       const { insertAfterId, ...task } = action.payload;
 
-      // Find siblings (same list + same parent)
-      const siblings = state.items.filter(
-        t =>
-          t.taskListId === task.taskListId &&
-          t.parentTaskId === task.parentTaskId
-      );
+//       // Find siblings (same list + same parent)
+//       const siblings = state.items.filter(
+//         t =>
+//           t.taskListId === task.taskListId &&
+//           t.parentTaskId === task.parentTaskId
+//       );
 
-      if (!insertAfterId) {
-        // Insert at beginning — order = minOrder - 10
-        const minOrder = siblings.length
-          ? Math.min(...siblings.map(t => t.order))
-          : 0;
-        state.items.push({ ...task, order: minOrder - 10 });
-      } else {
-        // Insert after specific task
-        const afterTask = state.items.find(t => t.id === insertAfterId);
-        const afterOrder = afterTask?.order ?? 0;
+//       if (!insertAfterId) {
+//         // Insert at beginning — order = minOrder - 10
+//         const minOrder = siblings.length
+//           ? Math.min(...siblings.map(t => t.order))
+//           : 0;
+//         state.items.push({ ...task, order: minOrder - 10 });
+//       } else {
+//         // Insert after specific task
+//         const afterTask = state.items.find(t => t.id === insertAfterId);
+//         const afterOrder = afterTask?.order ?? 0;
 
-        // Find next sibling's order to interpolate
-        const nextSibling = siblings
-          .filter(t => t.order > afterOrder)
-          .sort((a, b) => a.order - b.order)[0];
+//         // Find next sibling's order to interpolate
+//         const nextSibling = siblings
+//           .filter(t => t.order > afterOrder)
+//           .sort((a, b) => a.order - b.order)[0];
 
-        const newOrder = nextSibling
-          ? (afterOrder + nextSibling.order) / 2
-          : afterOrder + 10;
+//         const newOrder = nextSibling
+//           ? (afterOrder + nextSibling.order) / 2
+//           : afterOrder + 10;
 
-        state.items.push({ ...task, order: newOrder });
-      }
-    },
+//         state.items.push({ ...task, order: newOrder });
+//       }
+//     },
 
-    updateTask(state, action: PayloadAction<ReduxTask>) {
-      const idx = state.items.findIndex(t => t.id === action.payload.id);
-      if (idx >= 0) state.items[idx] = action.payload;
-    },
+//     updateTask(state, action: PayloadAction<ReduxTask>) {
+//       const idx = state.items.findIndex(t => t.id === action.payload.id);
+//       if (idx >= 0) state.items[idx] = action.payload;
+//     },
 
-    deleteTask(state, action: PayloadAction<string>) {
-      // Delete the task AND all its descendants (recursive)
-      const idsToDelete = collectDescendantIds(state.items, action.payload);
-      state.items = state.items.filter(t => !idsToDelete.includes(t.id));
-    },
+//     deleteTask(state, action: PayloadAction<string>) {
+//       // Delete the task AND all its descendants (recursive)
+//       const idsToDelete = collectDescendantIds(state.items, action.payload);
+//       state.items = state.items.filter(t => !idsToDelete.includes(t.id));
+//     },
 
-    deleteTasksByTaskList(state, action: PayloadAction<string>) {
-      state.items = state.items.filter(
-        t => t.taskListId !== action.payload
-      );
-    },
+//     deleteTasksByTaskList(state, action: PayloadAction<string>) {
+//       state.items = state.items.filter(
+//         t => t.taskListId !== action.payload
+//       );
+//     },
 
-    reorderTasks(
-      state,
-      action: PayloadAction<{
-        taskListId: string;
-        parentTaskId: string | null;
-        orderedIds: string[];
-      }>
-    ) {
-      const { orderedIds } = action.payload;
-      orderedIds.forEach((id, idx) => {
-        const task = state.items.find(t => t.id === id);
-        if (task) task.order = idx * 10;
-      });
-    },
+//     reorderTasks(
+//       state,
+//       action: PayloadAction<{
+//         taskListId: string;
+//         parentTaskId: string | null;
+//         orderedIds: string[];
+//       }>
+//     ) {
+//       const { orderedIds } = action.payload;
+//       orderedIds.forEach((id, idx) => {
+//         const task = state.items.find(t => t.id === id);
+//         if (task) task.order = idx * 10;
+//       });
+//     },
 
-    // Replace tasks for a project after API fetch
-    setTasks(state, action: PayloadAction<ReduxTask[]>) {
-      if (action.payload.length > 0) {
-        const projectId = action.payload[0].projectId;
-        state.items = [
-          ...state.items.filter(t => t.projectId !== projectId),
-          ...action.payload,
-        ];
-      } else {
-        state.items = action.payload;
-      }
-    },
+//     // Replace tasks for a project after API fetch
+//     setTasks(state, action: PayloadAction<ReduxTask[]>) {
+//       if (action.payload.length > 0) {
+//         const projectId = action.payload[0].projectId;
+//         state.items = [
+//           ...state.items.filter(t => t.projectId !== projectId),
+//           ...action.payload,
+//         ];
+//       } else {
+//         state.items = action.payload;
+//       }
+//     },
 
-    clearTasks(state) {
-      state.items = [];
-    },
-  },
-});
+//     clearTasks(state) {
+//       state.items = [];
+//     },
+//   },
+// });
 
-export const {
-  addTask,
-  updateTask,
-  deleteTask,
-  deleteTasksByTaskList,
-  reorderTasks,
-  setTasks,
-  clearTasks,
-} = tasksSlice.actions;
+// export const {
+//   addTask,
+//   updateTask,
+//   deleteTask,
+//   deleteTasksByTaskList,
+//   reorderTasks,
+//   setTasks,
+//   clearTasks,
+// } = tasksSlice.actions;
 
-export default tasksSlice.reducer;
+// export default tasksSlice.reducer;

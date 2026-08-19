@@ -38,175 +38,6 @@
  *  See App.tsx for the correct nesting order.
  */
 
-// import { useEffect, useRef } from 'react';
-// import keycloak from '@/lib/keycloak';
-// import {
-//   ensureFreshToken,
-//   mapKeycloakTokenToUser,
-//   performLogout,
-// } from '@/services/keycloakService';
-// import { useAppDispatch, useAppSelector } from '@/store';
-// import {
-//   loginSuccess,
-//   logout,
-//   setKeycloakInitialized,
-//   setTokens,
-// } from '@/store/slices/authSlice';
-
-// // How often the background timer checks / proactively refreshes the token.
-// const REFRESH_INTERVAL_MS = 300_000; // 300 seconds
-
-// interface Props {
-//   children: React.ReactNode;
-// }
-
-// export function KeycloakProvider({ children }: Props) {
-//   const dispatch = useAppDispatch();
-//   const keycloakInitialized = useAppSelector((s) => s.auth.keycloakInitialized);
-//   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-//   const initCalledRef = useRef(false);
-
-//   useEffect(() => {
-//     // Guard against React StrictMode double-invocation
-//     if (initCalledRef.current) return;
-//     initCalledRef.current = true;
-
-//     // ── Event listeners (wire BEFORE init) ──────────────────────────────
-
-//     keycloak.onAuthRefreshSuccess = () => {
-//       if (keycloak.token && keycloak.refreshToken) {
-//         dispatch(setTokens({
-//           accessToken: keycloak.token,
-//           refreshToken: keycloak.refreshToken,
-//         }));
-//       }
-//     };
-
-//     keycloak.onAuthRefreshError = async () => {
-//       dispatch(logout());
-//       await performLogout();
-//     };
-
-//     keycloak.onTokenExpired = async () => {
-//       const ok = await ensureFreshToken();
-//       if (!ok) {
-//         dispatch(logout());
-//         await performLogout();
-//       }
-//     };
-
-//     keycloak.onAuthLogout = () => {
-//       dispatch(logout());
-//     };
-
-//     // ── Init ─────────────────────────────────────────────────────────────
-
-//     keycloak
-//       .init({
-//         /**
-//          * 'check-sso': Checks for an existing Keycloak session without
-//          * forcing a redirect if the user isn't logged in.
-//          *
-//          * Without silentCheckSsoRedirectUri this works purely via
-//          * the Keycloak adapter's internal state — no iframe is created,
-//          * no 3p-cookie check is attempted.
-//          */
-//         onLoad: 'check-sso',
-
-//         /**
-//          * PKCE is required for public clients in Keycloak 18+.
-//          */
-//         // pkceMethod: 'S256',
-
-//         /**
-//          * CRITICAL FIX: Disable the login-status iframe.
-//          *
-//          * When true (the default), Keycloak creates a hidden iframe that
-//          * polls Keycloak's session endpoint. This iframe:
-//          *  1. Requires third-party cookies (blocked in Chrome/Firefox by default)
-//          *  2. Makes requests to /realms/{realm}/protocol/openid-connect/3p-cookies/
-//          *     which your React Router catches as a 404
-//          *  3. Times out if Keycloak is unreachable → init() rejects
-//          *
-//          * Set to false to skip all iframe-based session checking.
-//          * You still get session refresh via the background interval below.
-//          */
-//         checkLoginIframe: false,
-//         /**
-//          * Do NOT include silentCheckSsoRedirectUri here.
-//          * That option tells KC to load the SSO check inside an iframe
-//          * pointed at a page on your domain — it's the second source of the
-//          * iframe/routing conflict. Without it, `check-sso` is a no-op if
-//          * there's no active session, which is exactly what we want.
-//          */
-//       })
-//       .then(async (authenticated) => {
-//         if (authenticated && keycloak.token && keycloak.refreshToken && keycloak.tokenParsed) {
-//           const user = mapKeycloakTokenToUser(
-//             keycloak.tokenParsed as Parameters<typeof mapKeycloakTokenToUser>[0]
-//           );
-
-//           dispatch(loginSuccess({
-//             user,
-//             accessToken: keycloak.token,
-//             refreshToken: keycloak.refreshToken,
-//           }));
-
-//           startRefreshInterval();
-//         }
-
-//         // Always mark initialized — unblocks the app regardless of auth state
-//         dispatch(setKeycloakInitialized(true));
-//       })
-//       .catch((err) => {
-//         console.error('[Keycloak] init() failed:', err);
-//         // Still unblock the app so the user can see the login page
-//         dispatch(setKeycloakInitialized(true));
-//       });
-
-//     return () => {
-//       stopRefreshInterval();
-//     };
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, []);
-
-//   function startRefreshInterval() {
-//     intervalRef.current = setInterval(async () => {
-//       if (!keycloak.authenticated) return;
-//       const ok = await ensureFreshToken();
-//       if (!ok) {
-//         stopRefreshInterval();
-//         dispatch(logout());
-//         await performLogout();
-//       }
-//     }, REFRESH_INTERVAL_MS);
-//   }
-
-//   function stopRefreshInterval() {
-//     if (intervalRef.current) {
-//       clearInterval(intervalRef.current);
-//       intervalRef.current = null;
-//     }
-//   }
-
-//   if (!keycloakInitialized) {
-//     return (
-//       <div
-//         style={{
-//           minHeight: '100vh',
-//           display: 'grid',
-//           placeItems: 'center',
-//           fontSize: '0.875rem',
-//           color: 'var(--muted-foreground, #888)',
-//         }}
-//       >
-//         Initializing session…
-//       </div>
-//     );
-//   }
-
-//   return <>{children}</>;
-// }
 
 
 
@@ -248,8 +79,8 @@ export const KeycloakProvider: React.FC<{ children: React.ReactNode }> = ({
           pkceMethod: "S256",
           checkLoginIframe: false,
         });
-console.log("Keycloak Auth Result:", auth);
-console.log("Keycloak URL:", keycloak.authServerUrl);
+        console.log("Keycloak Auth Result:", auth);
+        // console.log("Keycloak URL:", keycloak.authServerUrl);
         setAuthenticated(auth);
         setInitialized(true);
 
@@ -258,7 +89,7 @@ console.log("Keycloak URL:", keycloak.authServerUrl);
         if (auth) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const tokenParsed: any = keycloak.tokenParsed;
-
+ localStorage.setItem("token", keycloak.token || "");
           dispatch(
             loginSuccess({
               user: {

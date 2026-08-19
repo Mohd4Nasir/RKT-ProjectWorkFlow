@@ -19,13 +19,32 @@ export type Priority = 'high' | 'medium' | 'low';
 export type TaskStatus = 'todo' | 'in-progress' | 'done';
 export type SLAStatus = 'on-track' | 'at-risk' | 'breached';
 
+/** A single owner assigned to a project. API returns an array of these under `owners`. */
+export interface ProjectOwner {
+  ownerId: string | number;
+  ownerName: string;
+}
+
 export interface Project {
   data: any;
   id: string | number;
   projectId: string | number;
   projectTitle: string;
-  ownerId: string | number;
-  ownerName: string;
+
+  /**
+   * Multiple owners, as returned by the API, e.g.:
+   * [{ ownerId: 3, ownerName: 'Nasir Rajput' }, { ownerId: 1, ownerName: 'piyush koley' }]
+   */
+  owners: ProjectOwner[];
+
+  /**
+   * @deprecated Back-compat single-owner fields, kept because some
+   * older components (OwnerPicker, filters) still read a single owner.
+   * These are derived from `owners[0]` at map-time — prefer `owners` for anything new.
+   */
+  ownerId?: string | number;
+  ownerName?: string;
+
   projectStatus: 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CLOSED'| 'ON_HOLD' | 'DELAYED';
   description?: string;
   progress?: number;
@@ -37,50 +56,7 @@ export interface Project {
   tag?: string;
   color?: string;
 }
-//======================================
-export interface TaskList {
-  listId: number;
 
-  listTitle: string;
-
-  sequence: number;
-
-  tasks: Task[];
-}
-
-export interface Task {
-  projectId?: string | number;
-  id: string | number;
-  priority: string;
-  taskDescription: string;
-  status: "in-progress" | "done" | "todo";
-  assigneeId: string;
-  taskId: number;
-  listId: number;
-  parentTaskId: number | string ;
-  taskTitle: string;
-  taskStatus: 'TODO' | 'IN_PROGRESS' | 'DONE';
-  taskSequence: number;
-  startDate?: string;
-  endDate?: string;
-  subTask: SubTask[];
-}
-
-export interface SubTask {
-  priority: string;
-  assigneeId: string;
-  taskDescription: string;
-  taskId: number;
-  parentTaskId: number;
-
-  taskTitle: string;
-  taskStatus: 'TODO' | 'IN_PROGRESS' | 'DONE';
-
-  taskSequence: number;
-
-  startDate?: string;
-  endDate?: string;
-}
 export type ProjectsResponse = ApiResponse<{
   projects: Project[];
 }>;
@@ -126,25 +102,4 @@ export interface ActivityItem {
   action: string;
   target: string;
   createdAt: string;
-}
-
-
-
-
-
-
-export interface CreateTaskListRequest {
-  projectId: string | number;
-  name: string;
-}
-
-export interface CreateTaskRequest {
-  projectId: string | number;
-  taskListId: string | number;
-  parentTaskId?: string | number | null;
-  taskName: string;
-  taskDescription?: string;
-  taskStartDate?: string;
-  taskEndDate?: string;
-  insertAfterId?: string | null;  // NEW — for position-based insert
 }

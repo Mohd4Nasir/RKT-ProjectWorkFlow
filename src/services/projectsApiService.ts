@@ -1,4 +1,4 @@
-import { Project, ProjectsResponse } from "@/types/ProejctAndTask";
+import { Project, ProjectsResponse } from "@/types/ProejctsType";
 import axiosInstance from "./axiosInstance";
 import { apiService } from "./apiService";
 
@@ -226,4 +226,14 @@ addProjectMember: async ({ projectId, userId, projectRole }: AddProjectMemberPar
     const roleResponse = await axiosInstance.get("/team/project/roles");
     return roleResponse.data;
   },
+   activtiyTracker: async (projectId:number) => {
+    try {
+      const response = await axiosInstance.get(`/activities/project/${projectId}`);
+      console.log(`Activity tracker for project ${projectId}:`, response.data.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Get activity tracker for project ${projectId} error:`, error);
+      throw error;
+    }
+  }
 };

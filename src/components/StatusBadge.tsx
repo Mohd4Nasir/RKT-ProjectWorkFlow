@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { Priority, ProjectStatus, SLAStatus, TaskStatus } from '@/types/ProejctAndTask';
+import { Priority, ProjectStatus, SLAStatus, TaskStatus } from '@/types/ProejctsType';
 
 const styles: Record<string, string> = {
   // status

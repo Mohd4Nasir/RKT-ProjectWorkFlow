@@ -12,7 +12,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { User } from '@/types/ProejctAndTask';
+import { User } from '@/types/ProejctsType';
 import { toast } from 'sonner';
 
 interface UpdateUserProps {

@@ -40,7 +40,7 @@ export function RichTextEditor({ value, onChange, placeholder, className, minHei
   };
 
   return (
-    <div className={cn('rounded-lg border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring', className)}>
+    <div className={cn('rounded-lg border border-input  overflow-hidden ', className)}>
       <div className="flex items-center gap-0.5 px-1.5 py-1 border-b bg-muted/30">
         <Btn onClick={() => exec('bold')} title="Bold"><Bold className="h-3.5 w-3.5" /></Btn>
         <Btn onClick={() => exec('italic')} title="Italic"><Italic className="h-3.5 w-3.5" /></Btn>

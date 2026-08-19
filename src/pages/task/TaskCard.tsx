@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/card';
 import { CalendarDays, Flag, Circle, Clock, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Task, Users } from '@/types/ProejctAndTask';
+import { Task, Users } from '@/types/ProejctsType';
 import { ReduxTask } from '@/store/slices/tasksSlice';
 
 const STATUS_CONFIG = {

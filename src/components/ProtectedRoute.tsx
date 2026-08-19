@@ -88,7 +88,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAppSelector } from '@/store';
 import { hasRealmRole } from '@/services/keycloakService';
-import { UserRole } from '@/types/ProejctAndTask';
+import { UserRole } from '@/types/ProejctsType';
 import { useAuth } from "@/providers/KeycloakProvider";
 
 interface Props {

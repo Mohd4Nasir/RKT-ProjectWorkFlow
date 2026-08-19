@@ -19,7 +19,7 @@ import { apiService } from '@/services/apiService';
 export default function Dashboard() {
   const user = useAppSelector((s) => s.auth.user!);
   const projects = useAppSelector((s) => s.projects.items);
-  const tasks = useAppSelector((s) => s.tasks.items);
+  const tasks = useAppSelector((s) => s.tasks.lists);
   const users = useAppSelector((s) => s.users.items);
    // State for API test
   const [apiResponse, setApiResponse] = useState<string>('');
@@ -91,7 +91,7 @@ export default function Dashboard() {
         title={`${greeting()}, ${user.name.split(' ')[0]} 👋`}
         subtitle={isAdmin ? "Here's what's happening across your organization today." : "Here's an overview of your work."}
         actions={
-          <Button className="bg-gradient-primary hover:opacity-95 shadow-glow" asChild>
+          <Button className="bg-primary hover:opacity-95 shadow-glow" asChild>
             <Link to="/projects"><Plus className="h-4 w-4 mr-1" /> New Project</Link>
           </Button>
         }

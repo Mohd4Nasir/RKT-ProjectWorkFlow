@@ -78,7 +78,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-20 h-16 bg-card/80 backdrop-blur-xl border-b border-border flex items-center px-4 md:px-6 gap-3">
+    <header className="sticky bg-secondary-55 top-0 z-20 h-16 backdrop-blur-xl border-b border-border flex items-center px-4 md:px-6 gap-3">
       <button
         className="h-9 w-9 grid place-items-center rounded-lg hover:bg-muted text-foreground"
         onClick={() => dispatch(toggleSidebar())}
@@ -156,7 +156,7 @@ export function Header() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-2 pl-1 pr-3 h-10 rounded-lg hover:bg-muted ml-1">
-              <UserAvatar name={user?.name || 'U'} size="sm" />
+              <UserAvatar className="bg-accent" name={user?.name || 'U'} size="sm" />
               <div className="hidden sm:block text-left leading-tight">
                 <div className="text-[13px] font-semibold">{user?.name}</div>
                 <div className="text-[10px] text-muted-foreground capitalize">{user?.role}</div>

@@ -5,61 +5,39 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    /* Brand */
-    --background: 260 60% 98%;
-    /* #F5F5F5 */
+ :root {
+  /* Main Colors */
+  --background: 60 100% 100%;      /* #fffffe */
+  --foreground: 223 100% 17%;      /* navy */
 
-    /* --background: 260 60% 98%;        */
-    --foreground: 260 25% 15%;
-    --surface: 0 0% 100%;
+  --primary: 337 84% 74%;          /* #PINK */
+  --secondary: 20 70% 85%;         /* peACH */
+  --accent: 187 55% 71%;           /* TEAL */
 
-    --card: 0 0% 100%;
-    --card-foreground: 260 25% 15%;
+  --heading: 223 100% 17%;         /* #001858 */
+  --paragraph: 224 63% 25%;        /* #172c66 */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 260 25% 15%;
+  /* =========================
+     Opacity Colors (55 = 33%)
+  ========================== */
 
-    /* Primary purple #886CC0 */
-    --primary: 358 70% 85%
-      /* #EEBBC3 */
-    ;
-    --primary-foreground: #111827;
-    /* Dark text */
-    --primary-hover: 344 85% 72%;
-    /* Slightly darker hover */
-    /* #6B21A5 */
-    --primary-soft: 261 60% 92%;
+  --primary-55: 337 84% 74% / 0.33;
+  --secondary-55: 20 70% 85% / 0.33;
+  --accent-55: 187 55% 71% / 0.33;
+  --heading-55: 223 100% 17% / 0.33;
+  --paragraph-55: 224 63% 25% / 0.33;
 
-    --secondary: 260 40% 94%;
-    --secondary-foreground: 260 30% 25%;
+  /* Other */
+  --border: 20 45% 88%;
+  --input: 20 45% 88%;
+  --ring: 337 84% 74%;
 
-    --muted: 260 30% 95%;
-    --muted-foreground: 260 10% 45%;
-
-    --accent: 261 60% 92%;
-    --accent-foreground: 273 67% 39%;
-
-    --success: 160 84% 39%;
-    /* #10B981 */
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    /* #F59E0B */
-    --warning-foreground: 0 0% 100%;
-    --danger: 0 84% 60%;
-    /* #EF4444 */
-    --danger-foreground: 0 0% 100%;
-    --info: 217 91% 60%;
-    --info-foreground: 0 0% 100%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 260 30% 90%;
-    --input: 260 30% 90%;
-    --ring: 261 38% 59%;
-
-    --radius: 0.875rem;
+  --radius: .9rem;
+  /* inside :root, alongside your other colors */
+--card: 0 0% 100%;
+--card-foreground: 223 100% 17%;
+--popover: 0 0% 100%;
+--popover-foreground: 223 100% 17%;
 
     /* Sidebar - deep purple brand */
     --sidebar-background: 270 45% 22%;
@@ -89,49 +67,70 @@
     --shadow-glow: 0 8px 32px hsl(261 38% 59% / 0.30);
   }
 
-  .dark {
-    --background: 260 25% 9%;
-    --foreground: 260 20% 95%;
-    --surface: 260 25% 13%;
+ .dark {
+  --background: 223 30% 8%;          /* near-black navy */
+  --foreground: 224 20% 92%;         /* light text */
 
-    --card: 260 25% 12%;
-    --card-foreground: 260 20% 95%;
+  --primary: 337 70% 68%;            /* pink — slightly muted so it doesn't glare */
+  --primary-foreground: 223 30% 10%;
+  --primary-hover: 337 75% 74%;
 
-    --popover: 260 25% 12%;
-    --popover-foreground: 260 20% 95%;
+  --secondary: 20 35% 22%;           /* peach, darkened for dark surfaces */
+  --secondary-foreground: 20 60% 90%;
 
-    --primary: 261 50% 68%;
-    --primary-foreground: 260 25% 10%;
-    --primary-hover: 261 60% 75%;
-    --primary-soft: 261 30% 22%;
+  --accent: 187 40% 32%;             /* teal, darkened */
+  --accent-foreground: 187 60% 85%;
 
-    --secondary: 260 20% 18%;
-    --secondary-foreground: 260 20% 95%;
+  --heading: 0 0% 96%;               /* was navy-on-white → now near-white text */
+  --paragraph: 224 20% 78%;          /* was dark-blue-on-white → now light muted text */
 
-    --muted: 260 20% 16%;
-    --muted-foreground: 260 15% 65%;
+  /* 33%-alpha tints — same hues, tuned so they read as a subtle glow on dark bg
+     rather than washing out like the light-mode version would */
+  --primary-55: 337 70% 68% / 0.28;
+  --secondary-55: 20 60% 55% / 0.22;
+  --accent-55: 187 55% 55% / 0.24;
+  --heading-55: 0 0% 96% / 0.12;
+  --paragraph-55: 224 20% 78% / 0.16;
 
-    --accent: 261 30% 22%;
-    --accent-foreground: 261 50% 80%;
+  --card: 223 28% 11%;
+  --card-foreground: var(--heading);
 
-    --border: 260 20% 20%;
-    --input: 260 20% 20%;
-    --ring: 261 50% 68%;
+  --muted: 223 20% 16%;
+  --muted-foreground: 224 15% 65%;
 
-    --sidebar-background: 270 40% 14%;
-    --sidebar-foreground: 260 20% 85%;
-    --sidebar-primary: 265 47% 96%;
-    --sidebar-primary-foreground: 261 38% 59%;
-    --sidebar-accent: 270 35% 22%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 270 30% 20%;
-    --sidebar-ring: 261 50% 68%;
+  --success: 160 70% 45%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 85% 55%;
+  --warning-foreground: 223 30% 10%;
+  --danger: 0 70% 55%;
+  --danger-foreground: 0 0% 100%;
+  --destructive: 0 70% 55%;
+  --destructive-foreground: 0 0% 100%;
+  --info: var(--accent);
+  --info-foreground: var(--accent-foreground);
 
-    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.4);
-    --shadow: 0 4px 14px hsl(0 0% 0% / 0.4);
-    --shadow-md: 0 8px 24px hsl(0 0% 0% / 0.5);
-    --shadow-lg: 0 20px 48px hsl(0 0% 0% / 0.6);
-  }
+  --border: 223 20% 20%;
+  --input: 223 20% 20%;
+  --ring: 337 70% 68%;
+
+  /* Sidebar stays the same deep navy — it was already dark in light mode too */
+  --sidebar-background: 223 45% 10%;
+  --sidebar-foreground: 224 25% 82%;
+  --sidebar-primary: 20 40% 20%;
+  --sidebar-primary-foreground: 20 70% 92%;
+  --sidebar-accent: 223 35% 18%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-border: 223 30% 16%;
+  --sidebar-ring: 337 60% 68%;
+  --sidebar-muted: 224 15% 60%;
+
+  --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.4);
+  --shadow: 0 4px 14px hsl(0 0% 0% / 0.4);
+  --shadow-md: 0 8px 24px hsl(0 0% 0% / 0.5);
+  --shadow-lg: 0 20px 48px hsl(0 0% 0% / 0.6);
+  --shadow-glow: 0 8px 32px hsl(337 70% 68% / 0.35);
+}
+  
 }
 
 @layer base {
@@ -184,4 +183,5 @@
     background: hsl(var(--border));
     border-radius: 8px;
   }
+  
 }

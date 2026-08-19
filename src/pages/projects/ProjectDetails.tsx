@@ -1,149 +1,3 @@
-// import { useEffect, useState } from 'react';
-// import { useLocation, useNavigate, useParams } from 'react-router-dom';
-// import { useAppDispatch, useAppSelector } from '@/store';
-// import { projectApiService } from '@/services/projectsApiService';
-// import { setTaskLists } from '@/store/slices/taskListsSlice';
-// import { setTasks } from '@/store/slices/tasksSlice';
-// import { ReduxTask } from '@/store/slices/tasksSlice';
-// import { ReduxTaskList } from '@/store/slices/taskListsSlice';
-// import { Button } from '@/components/ui/button';
-// import { cn } from '@/lib/utils';
-// import { toast } from 'sonner';
-// import { format } from 'date-fns';
-// import {
-//   BarChart3, CheckSquare, FileText, Flag,
-//   AlertCircle, Users, ArrowUpRight, MoreHorizontal,
-// } from 'lucide-react';
-
-// import { ReportsTab } from '../projectTabs/ReportsTab';
-// import { DocumentsTab } from '../projectTabs/DocumentsTab';
-// import { MilestonesTab } from '../projectTabs/MilestonesTab';
-// import { IssuesTab } from '../projectTabs/IssuesTab';
-// import { UsersTab } from '../projectTabs/UserTab';
-// import { DashboardTab } from '../projectTabs/DashboardTab';
-// import { TasksTab } from '../projectTabs/TaskTab';
-
-// type Tab = 'dashboard' | 'tasks' | 'reports' | 'documents' | 'milestones' | 'issues' | 'users';
-
-// const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-//   { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 className="h-3.5 w-3.5" /> },
-//   { id: 'tasks', label: 'Tasks', icon: <CheckSquare className="h-3.5 w-3.5" /> },
-//   { id: 'reports', label: 'Reports', icon: <BarChart3 className="h-3.5 w-3.5" /> },
-//   { id: 'documents', label: 'Documents', icon: <FileText className="h-3.5 w-3.5" /> },
-//   { id: 'milestones', label: 'Milestones', icon: <Flag className="h-3.5 w-3.5" /> },
-//   { id: 'issues', label: 'Issues', icon: <AlertCircle className="h-3.5 w-3.5" /> },
-//   { id: 'users', label: 'Users', icon: <Users className="h-3.5 w-3.5" /> },
-// ];
-
-// const mapStatus = (s: string): 'todo' | 'in-progress' | 'done' => {
-//   switch (s?.toUpperCase()) {
-//     case 'IN_PROGRESS': return 'in-progress';
-//     case 'DONE': return 'done';
-//     default: return 'todo';
-//   }
-// };
-
-// export default function ProjectDetails() {
-//   const { id } = useParams<{ id: string }>();
-//   const navigate = useNavigate();
-//   const dispatch = useAppDispatch();
-//   const location = useLocation();
-//   const [tab, setTab] = useState<Tab>('tasks');
-//   const project = location.state?.project;
-//   console.log('ProjectDetails: project from state:', project);
-//   // const project = useAppSelector(s => s.projects.items.find(p => p.id === id))
-
-  
-//   // ── Guards ─────────────────────────────────────────────────────────────────
-//   // if (loading) return (
-//   //   <div className="flex items-center justify-center min-h-[400px]">
-//   //     <div className="text-center">
-//   //       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-//   //       <p className="mt-4 text-sm text-muted-foreground">Loading project...</p>
-//   //     </div>
-//   //   </div>
-//   // );
-
-//   if (!project) return (
-//     <div className="card-elevated p-12 text-center">
-//       <p className="font-semibold">Project not found</p>
-//       <Button variant="outline" className="mt-3" onClick={() => navigate('/projects')}>
-//         Back to Projects
-//       </Button>
-//     </div>
-//   );
-
-//   // ── Render ─────────────────────────────────────────────────────────────────
-//   return (
-//     <div className="space-y-5">
-//       {/* Header */}
-//       <div className="flex items-center gap-3 px-5 py-3 border-b border-border bg-card rounded-t-2xl">
-//         <span
-//           className="h-7 w-7 rounded-lg grid place-items-center text-white text-xs font-bold flex-shrink-0"
-//           style={{ background: project.color }}
-//         >
-//           {project.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
-//         </span>
-//         <div className="flex items-center gap-2 min-w-0">
-//           <span className="text-xs font-mono text-muted-foreground font-semibold">
-//             {`KI-${100 + (parseInt(project.id.replace(/\D/g, ''), 10) || 1) * 7}`}
-//           </span>
-//           <h2 className="font-bold text-base truncate">{project.name}</h2>
-//         </div>
-//         <div className="flex items-center gap-1.5 ml-auto flex-shrink-0">
-//           <Button variant="ghost" size="sm" className="text-xs font-semibold" onClick={() => navigate('/projects')}>
-//             Back to Projects <ArrowUpRight className="h-3.5 w-3.5 ml-1" />
-//           </Button>
-//           <button className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground">
-//             <MoreHorizontal className="h-4 w-4" />
-//           </button>
-//         </div>
-//       </div>
-
-//       {/* Tabs */}
-//       <div className="flex items-center gap-0 px-4 border-b border-border bg-card overflow-x-auto">
-//         {TABS.map(t => (
-//           <button
-//             key={t.id}
-//             onClick={() => setTab(t.id)}
-//             className={cn(
-//               'flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors',
-//               tab === t.id
-//                 ? 'border-[#E07B39] text-[#E07B39]'
-//                 : 'border-transparent text-muted-foreground hover:text-foreground',
-//             )}
-//           >
-//             {t.icon}{t.label}
-//           </button>
-//         ))}
-//       </div>
-
-//       {/* Tab content — each tab is fully self-contained */}
-//       <div className="min-h-[calc(100vh-160px)]">
-//         {tab === 'dashboard' && <DashboardTab project={project} />}
-//         {tab === 'tasks' && <TasksTab projectId={project.id} />}
-//         {tab === 'reports' && <ReportsTab projectId={project.id} />}
-//         {tab === 'documents' && <DocumentsTab projectId={project.id} />}
-//         {tab === 'milestones' && <MilestonesTab projectId={project.projectId} />}
-//         {tab === 'issues' && <IssuesTab projectId={project.id} />}
-//         {tab === 'users' && <UsersTab project={project} />}
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store';
@@ -158,17 +12,18 @@ import {
   AlertCircle, Users, ArrowUpRight, MoreHorizontal,
 } from 'lucide-react';
 
-import { ReportsTab } from '../projectTabs/ReportsTab';
-import { DocumentsTab } from '../projectTabs/DocumentsTab';
-import { MilestonesTab } from '../projectTabs/MilestonesTab';
-import { IssuesTab } from '../projectTabs/IssuesTab';
-import { UsersTab } from '../projectTabs/UserTab';
-import { DashboardTab } from '../projectTabs/DashboardTab';
-import { TasksTab } from '../projectTabs/TaskTab';
+import { ReportsTab } from '../AllTabs/ReportsTab';
+import { DocumentsTab } from '../AllTabs/DocumentsTab';
+import { MilestonesTab } from '../AllTabs/MilestonesTab';
+import { IssuesTab } from '../AllTabs/IssuesTab';
+import { UsersTab } from '../AllTabs/UserTab';
+import { DashboardTab } from '../AllTabs/DashboardTab';
+import { TasksTab } from '../AllTabs/TaskTab';
 import { getProjectFromStorage, saveProjectToStorage } from '@/utils/projectStorage';
-import { Project } from '@/types/ProejctAndTask';
+import { Project } from '@/types/ProejctsType';
+import ActivityTab from '../AllTabs/ActivityTab';
 
-type Tab = 'dashboard' | 'tasks' | 'reports' | 'documents' | 'milestones' | 'issues' | 'users';
+type Tab = 'dashboard' | 'tasks' | 'reports' | 'documents' | 'milestones' | 'issues' | 'users' | 'activity';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 className="h-3.5 w-3.5" /> },
@@ -178,6 +33,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'milestones', label: 'Milestones', icon: <Flag className="h-3.5 w-3.5" /> },
   { id: 'issues', label: 'Issues', icon: <AlertCircle className="h-3.5 w-3.5" /> },
   { id: 'users', label: 'Team', icon: <Users className="h-3.5 w-3.5" /> },
+  { id: 'activity', label: 'Activity', icon: <AlertCircle className="h-3.5 w-3.5" /> },
 ];
 
 const mapStatus = (s: string): 'todo' | 'in-progress' | 'done' => {
@@ -207,23 +63,23 @@ export default function ProjectDetails() {
   // const projectsLoading = useAppSelector(state => state.projects || false);
   
   console.log('🔍 ProjectDetails: ID from URL:', id);
-  console.log('🔍 Location state:', location.state);
+  // console.log('🔍 Location state:', location.state);
   
   // ==========================================
   // ✅ MAIN LOGIC: Load project from multiple sources
   // ==========================================
   useEffect(() => {
     const loadProject = async () => {
-      console.log('📡 Loading project...');
+      // console.log('📡 Loading project...');
       
       // 1️⃣ Try: Location state se
       let foundProject = location.state?.project;
-      console.log('1️⃣ From location.state:', foundProject ? '✅ Found' : '❌ Not found');
+      // console.log('1️⃣ From location.state:', foundProject ? '✅ Found' : '❌ Not found');
       
       // 2️⃣ Try: SessionStorage se (refresh case)
       if (!foundProject) {
         foundProject = getProjectFromStorage(id);
-        console.log('2️⃣ From sessionStorage:', foundProject ? '✅ Found' : '❌ Not found');
+        // console.log('2️⃣ From sessionStorage:', foundProject ? '✅ Found' : '❌ Not found');
       }
       
       // 3️⃣ Try: Redux list se
@@ -317,10 +173,9 @@ export default function ProjectDetails() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-border bg-card rounded-t-2xl">
+      <div className="flex items-center gap-3 px-5 bg-secondary-55 py-3 border-b border-border  rounded-t-2xl">
         <span
-          className="h-7 w-7 rounded-lg grid place-items-center text-white text-xs font-bold flex-shrink-0"
-          style={{ background: project.color || '#E07B39' }}
+          className="h-7 w-7 rounded-lg grid place-items-center text-white bg-accent  text-xs font-bold flex-shrink-0"
         >
           {(project.name || project.projectTitle || 'P')
             .split(' ')
@@ -379,6 +234,7 @@ export default function ProjectDetails() {
         {tab === 'milestones' && <MilestonesTab projectId={projectId} />}
         {tab === 'issues' && <IssuesTab projectId={projectId} />}
         {tab === 'users' && <UsersTab project={project} />}
+        {tab === 'activity' && <ActivityTab projectId={projectId} />}
       </div>
     </div>
   );
