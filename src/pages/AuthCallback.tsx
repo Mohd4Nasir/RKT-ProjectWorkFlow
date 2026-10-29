@@ -69,7 +69,7 @@ export default function AuthCallback() {
     return (
       <div className="min-h-screen grid place-items-center">
         <div className="text-center space-y-4">
-          <div className="text-red-600 text-xl">❌ {error}</div>
+          <div className="text-danger text-xl">❌ {error}</div>
           <button 
             onClick={() => window.close()}
             className="px-4 py-2 bg-gray-200 rounded"

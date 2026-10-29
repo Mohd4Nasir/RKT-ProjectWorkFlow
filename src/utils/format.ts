@@ -18,7 +18,7 @@ export function avatarColor(seed: string) {
   return colors[Math.abs(h) % colors.length];
 }
 
-export function userById(users: User[], id: string) { return users.find((u) => u.id === id); }
+export function userById(users: User[], id: string | number) { return users.find((u) => u.id === id); }
 
 export function formatDate(d?: string) {
   if (!d) return '—';

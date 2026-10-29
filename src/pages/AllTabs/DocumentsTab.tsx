@@ -46,7 +46,7 @@ export function DocumentsTab({ projectId }: Props) {
           <h3 className="text-lg font-semibold">Documents</h3>
           <p className="text-sm text-muted-foreground mt-0.5">Project files and attachments</p>
         </div>
-        <Button onClick={handleUpload} className="bg-[#E07B39] hover:bg-[#E07B39]/90 text-white" size="sm">
+        <Button onClick={handleUpload} className="bg-brand-cta hover:bg-brand-cta/90 text-white" size="sm">
           <Upload className="h-4 w-4 mr-2" /> Upload
         </Button>
       </div>
@@ -83,7 +83,7 @@ export function DocumentsTab({ projectId }: Props) {
                 <tr key={doc.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                      <FileText className="h-4 w-4 text-info flex-shrink-0" />
                       <span className="font-medium text-[13px]">{doc.name}</span>
                     </div>
                   </td>
@@ -98,7 +98,7 @@ export function DocumentsTab({ projectId }: Props) {
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDownload(doc.id)}>
                         <Download className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:bg-red-50" onClick={() => handleDelete(doc.id)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-danger hover:bg-red-50" onClick={() => handleDelete(doc.id)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>

@@ -15,7 +15,7 @@ export function ProjectActionCell({ joined, onJoin }: Props) {
     <button
       onClick={onJoin}
       className="text-[13px] font-semibold text-warning hover:text-warning/80 hover:underline transition-colors"
-      style={{ color: '#F97316' }}
+      style={{ color: 'hsl(var(--warning))' }}
     >
       Join Project
     </button>

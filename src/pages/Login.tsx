@@ -28,7 +28,7 @@ export default function Login() {
     });
   };
   const T = {
-    navy: '#001858',
+    navy: '#1B1C27',
     para: '#172c66',
     pink: '#f582ae',
     peach: '#f3d2c1',
@@ -55,7 +55,7 @@ export default function Login() {
       <div className="absolute inset-0 flex">
         {/* Left Diagonal Section - RishiKirti Brand Color */}
         <div
-          className="w-1/2 bg-gradient-to-b from-[#241457] to-[#1a1a2e] relative"
+          className="w-1/2 bg-gradient-to-b from-[#1B1C27] to-[#1a1a2e] relative"
           style={{ clipPath: 'polygon(0 0, 100% 0, 105% 100%, 0 84%)' }}
         >
 
@@ -67,7 +67,7 @@ export default function Login() {
         </div>
 
         {/* Right Diagonal Section */}
-        <div className="w-3/4 bg-[#E8E3F4] relative"
+        <div className="w-3/4 bg-brand-surface relative"
           style={{
             clipPath: 'polygon(15% 0, 100% 0, 100% 100%, 0 100%)'
           }}>

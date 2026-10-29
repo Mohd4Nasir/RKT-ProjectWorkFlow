@@ -3,7 +3,12 @@ import { Project } from '@/types/ProejctsType';
 import { mockProjects } from '@/services/mockData';
 
 interface ProjectsState { items: Project[]; }
-const initialState: ProjectsState = { items:mockProjects }; // Initialize with mock data for testing
+const initialState: ProjectsState = { items:[] }; // Initialize with mock data for testing
+
+// Ids arrive as either strings or numbers depending on the endpoint, so
+// strict `===` silently misses. Compare on a normalised string instead.
+const sameId = (a?: string | number | null, b?: string | number | null) =>
+  a != null && b != null && String(a) === String(b);
 
 const slice = createSlice({
   name: 'projects',
@@ -17,61 +22,67 @@ const slice = createSlice({
     },
     
     updateProject(state, a: PayloadAction<Project>) {
-      const i = state.items.findIndex((p) => p.id === a.payload.id);
+      const i = state.items.findIndex((p) => sameId(p.id, a.payload.id));
       if (i >= 0) state.items[i] = a.payload;
     },
     
-    deleteProject(state, a: PayloadAction<string>) {
-      state.items = state.items.filter((p) => p.id !== a.payload);
+    deleteProject(state, a: PayloadAction<string | number>) {
+      state.items = state.items.filter((p) => !sameId(p.id, a.payload));
     },
+    patchProject(state, a: PayloadAction<Partial<Project> & { projectId: string | number }>) {
+  const i = state.items.findIndex((p) => String(p.projectId) === String(a.payload.projectId));
+  if (i >= 0) state.items[i] = { ...state.items[i], ...a.payload };
+},
 
     // Add a member to the project
-    addProjectMember(state, a: PayloadAction<{ projectId: string; userId: string; role?: string }>) {
-      const project = state.items.find((p) => p.id === a.payload.projectId);
-      if (project && !project.members.includes(a.payload.userId)) {
-        project.members.push(a.payload.userId);
+    addProjectMember(state, a: PayloadAction<{ projectId: string | number; userId: string | number; role?: string }>) {
+      const project = state.items.find((p) => sameId(p.id, a.payload.projectId));
+      if (project && !project.members.some((m) => sameId(m, a.payload.userId))) {
+        project.members.push(String(a.payload.userId));
       }
     },
 
     // Remove a member from the project
-    removeProjectMember(state, a: PayloadAction<{ projectId: string; userId: string }>) {
-      const project = state.items.find((p) => p.id === a.payload.projectId);
+    removeProjectMember(state, a: PayloadAction<{ projectId: string | number; userId: string | number }>) {
+      const project = state.items.find((p) => sameId(p.id, a.payload.projectId));
       if (project) {
-        project.members = project.members.filter((id) => id !== a.payload.userId);
+        project.members = project.members.filter((id) => !sameId(id, a.payload.userId));
       }
     },
 
     // Update member role
-    updateProjectMemberRole(state, a: PayloadAction<{ projectId: string; userId: string; role: string }>) {
-      const project = state.items.find((p) => p.id === a.payload.projectId);
+    updateProjectMemberRole(state, a: PayloadAction<{ projectId: string | number; userId: string | number; role: string }>) {
+      const project = state.items.find((p) => sameId(p.id, a.payload.projectId));
       if (project) {
         // Role update handled at application level if needed
       }
     },
 
     // Bulk add members
-    addMultipleProjectMembers(state, a: PayloadAction<{ projectId: string; userIds: string[]; role?: string }>) {
-      const project = state.items.find((p) => p.id === a.payload.projectId);
+    addMultipleProjectMembers(state, a: PayloadAction<{ projectId: string | number; userIds: (string | number)[]; role?: string }>) {
+      const project = state.items.find((p) => sameId(p.id, a.payload.projectId));
       if (project) {
-        const newMembers = a.payload.userIds.filter((id) => !project.members.includes(id));
+        const newMembers = a.payload.userIds
+          .filter((id) => !project.members.some((m) => sameId(m, id)))
+          .map(String);
         project.members.push(...newMembers);
       }
     },
 
     // Transfer ownership to another member
-    transferProjectOwnership(state, a: PayloadAction<{ projectId: string; newOwnerId: string }>) {
-      const project = state.items.find((p) => p.id === a.payload.projectId);
-      if (project && project.members.includes(a.payload.newOwnerId)) {
+    transferProjectOwnership(state, a: PayloadAction<{ projectId: string | number; newOwnerId: string | number }>) {
+      const project = state.items.find((p) => sameId(p.id, a.payload.projectId));
+      if (project && project.members.some((m) => sameId(m, a.payload.newOwnerId))) {
         // Add current owner to members if not already there
-        if (!project.members.includes(project.ownerId)) {
-          project.members.push(project.ownerId);
+        if (project.ownerId != null && !project.members.some((m) => sameId(m, project.ownerId!))) {
+          project.members.push(String(project.ownerId));
         }
         
         // Update ownership
         project.ownerId = a.payload.newOwnerId;
         
         // Remove new owner from members list (since they're now owner)
-        project.members = project.members.filter((id) => id !== a.payload.newOwnerId);
+        project.members = project.members.filter((id) => !sameId(id, a.payload.newOwnerId));
       }
     },
   },
@@ -81,6 +92,7 @@ export const {
   setProjects,
   addProject, 
   updateProject, 
+  patchProject,
   deleteProject,
   addProjectMember,
   removeProjectMember,

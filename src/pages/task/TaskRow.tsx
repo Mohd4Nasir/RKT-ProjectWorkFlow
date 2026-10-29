@@ -1,32 +1,64 @@
 
 // ===================================================================================================================================================
-import { ChevronRight, ChevronDown, MoreHorizontal, GripVertical } from 'lucide-react';
+import { ChevronRight, ChevronDown, MoreHorizontal, GripVertical, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SubTaskNode, TaskNode } from '@/types/taskTypes';
 import { Button } from '../../components/ui/button';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  DEFAULT_TASK_STATUS_OPTIONS, findTaskStatusOption, prettyTaskStatusLabel,
+  TaskStatusOption,
+} from '@/utils/tasksTabUtils';
 
-const STATUS_CFG: Record<string, { label: string; badge: string }> = {
-  TODO: { label: 'To Do', badge: 'bg-slate-100 text-slate-600 border-slate-200' },
-  IN_PROGRESS: { label: 'In Progress', badge: 'bg-amber-100 text-amber-700 border-amber-200' },
-  DONE: { label: 'Done', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-};
+function StatusPill({
+  status,
+  statusOptions,
+  disabled,
+  onChange,
+}: {
+  status: string;
+  statusOptions: TaskStatusOption[];
+  disabled?: boolean;
+  onChange: (next: string) => void;
+}) {
+  const options = statusOptions.length ? statusOptions : DEFAULT_TASK_STATUS_OPTIONS;
+  const current = findTaskStatusOption(status, options);
+  const selectValue = current?.value ?? options[0].value;
+  const label = current?.label || prettyTaskStatusLabel(status) || '—';
+  const dot = current?.dot ?? 'bg-muted-foreground';
+  const badge = current?.badge ?? 'bg-muted text-paragraph border-border';
 
-const STATUS_CYCLE = ['TODO', 'IN_PROGRESS', 'DONE'];
-
-function cycleStatus(current: string): string {
-  const idx = STATUS_CYCLE.indexOf(current);
-  return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
-}
-
-function StatusPill({ status, onClick }: { status: string; onClick?: () => void }) {
-  const cfg = STATUS_CFG[status] ?? STATUS_CFG.TODO;
   return (
-    <button
-      onClick={e => { e.stopPropagation(); onClick?.(); }}
-      className={cn('text-[11px] px-2.5 py-0.5 rounded-full font-medium border whitespace-nowrap transition-opacity hover:opacity-80', cfg.badge)}
-    >
-      {cfg.label}
-    </button>
+    <Select value={selectValue} disabled={disabled} onValueChange={onChange}>
+      <SelectTrigger
+        onClick={e => e.stopPropagation()}
+        onPointerDown={e => e.stopPropagation()}
+        onMouseDown={e => e.stopPropagation()}
+        className={cn(
+          'h-6 w-[128px] shrink-0 gap-1.5 rounded-full border px-2 text-[11px] font-medium whitespace-nowrap',
+          'shadow-none focus:ring-0 focus:ring-offset-0 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:opacity-60',
+          badge
+        )}
+      >
+        <span className={cn('h-1.5 w-1.5 flex-shrink-0 rounded-full', dot)} />
+        <SelectValue>
+          <span className="truncate">{label}</span>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent className="min-w-[150px]">
+        {options.map(opt => (
+          <SelectItem key={opt.value} value={opt.value} className="text-xs font-medium">
+            <span className="flex w-full items-center gap-2">
+              <span className={cn('h-1.5 w-1.5 rounded-full', opt.dot)} />
+              <span className="flex-1">{opt.label}</span>
+              {selectValue === opt.value && <Check className="h-3.5 w-3.5 text-primary" />}
+            </span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -38,7 +70,11 @@ interface TaskRowProps {
   onToggleTask: (id: string) => void;
   onOpenEditTask: (task: SubTaskNode) => void;
   onDeleteTask: (task: SubTaskNode) => void;
-onUpdateTask: (task: Partial<TaskNode>) => void;
+  onUpdateTask: (task: Partial<TaskNode>) => void;
+  onUpdateTaskStatus: (taskId: string, taskStatus: string) => void;
+  /** Options from GET /task/statuses. */
+  statusOptions: TaskStatusOption[];
+  statusSavingId?: string | null;
   onDragStart: (id: string, tlId: string, parentId: string | null) => void;
   onDrop: (e: React.DragEvent, targetId: string, before: boolean, tlId: string, parentId: string | null) => void;
   onContextMenu: (e: React.MouseEvent, task: SubTaskNode) => void;
@@ -48,7 +84,7 @@ onUpdateTask: (task: Partial<TaskNode>) => void;
 
 export function TaskRow({
   task, taskListId, depth, expandedTasks, onToggleTask,
-  onOpenEditTask, onDeleteTask, onUpdateTask, onDragStart, onDrop,
+  onOpenEditTask, onDeleteTask, onUpdateTask, onUpdateTaskStatus, statusOptions, statusSavingId, onDragStart, onDrop,
   onContextMenu, onThreeDots, onTaskClick,
 }: TaskRowProps) {
   // ✅ API se jo subTask array aaya hai, waisa hi — koi sort/filter nahi
@@ -57,11 +93,11 @@ export function TaskRow({
   const isExpanded = expandedTasks.has(taskIdStr);
   const hasChildren = children.length > 0;
 
-  const depthColors = ['text-blue-600'];
+  const depthColors = ['text-info'];
 const iconColor =
   task.parentTaskId == null
-    ? "text-[#001858]"   // Main Task
-    : "text-blue-500";   // Subtask
+    ? "text-heading"   // Main Task
+    : "text-info";   // Subtask
   
   
   return (
@@ -75,18 +111,18 @@ const iconColor =
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
           onDrop(e, taskIdStr, e.clientY < rect.top + rect.height / 2, taskListId, task.parentTaskId ? String(task.parentTaskId) : null);
         }}
-        className="group border-b border-slate-50 hover:bg-slate-50/60 cursor-grab transition-colors"
+        className="group border-b border-border hover:bg-muted/60 cursor-grab transition-colors"
       >
         <td className="py-1.5 px-3">
           <div className="flex items-center gap-1.5" style={{ paddingLeft: depth * 20 }}>
             {hasChildren ? (
-              <button onClick={() => onToggleTask(taskIdStr)} className="flex-shrink-0 text-slate-500 hover:text-slate-700">
+              <button onClick={() => onToggleTask(taskIdStr)} className="flex-shrink-0 text-muted-foreground hover:text-heading">
                 {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               </button>
             ) : (
               <span className="w-[14px] flex-shrink-0" />
             )}
-            <GripVertical size={13} className="text-slate-300 flex-shrink-0" />
+            <GripVertical size={13} className="text-muted-foreground flex-shrink-0" />
             <button
               onClick={e => { e.stopPropagation(); onTaskClick?.(task); }}
               className={cn('text-sm font-medium truncate text-left hover:underline', iconColor)}
@@ -99,21 +135,23 @@ const iconColor =
         <td className="py-1.5 px-3">
           <StatusPill
             status={task.taskStatus}
-            onClick={() => onUpdateTask({ taskId: task.taskId, taskStatus: cycleStatus(task.taskStatus) })}
+            statusOptions={statusOptions}
+            disabled={statusSavingId === taskIdStr}
+            onChange={next => onUpdateTaskStatus(taskIdStr, next)}
           />
         </td>
 
         <td className="py-1.5 px-3">
-          <span className="text-xs text-slate-500">{task.priority || 'Medium'}</span>
+          <span className="text-xs text-muted-foreground">{task.priority || 'Medium'}</span>
         </td>
 
-        <td className="py-1.5 px-3 text-xs text-slate-500 whitespace-nowrap">
+        <td className="py-1.5 px-3 text-xs text-muted-foreground whitespace-nowrap">
           {task.endDate || '-'}
         </td>
 
         <td className="py-1.5 px-3">
           <div className="flex items-center justify-end gap-0.5">
-            <Button variant="ghost" size="icon" className="h-6 w-6" title="More options" onClick={e => onThreeDots(e, task)}>
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-foreground" title="More options" onClick={e => onThreeDots(e, task)}>
               <MoreHorizontal size={12} />
             </Button>
           </div>
@@ -131,6 +169,9 @@ const iconColor =
           onOpenEditTask={onOpenEditTask}
           onDeleteTask={onDeleteTask}
           onUpdateTask={onUpdateTask}
+          onUpdateTaskStatus={onUpdateTaskStatus}
+          statusOptions={statusOptions}
+          statusSavingId={statusSavingId}
           onDragStart={onDragStart}
           onDrop={onDrop}
           onContextMenu={onContextMenu}

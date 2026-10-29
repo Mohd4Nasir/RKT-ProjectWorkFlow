@@ -14,7 +14,7 @@ const slice = createSlice({
       const i = state.items.findIndex((u) => u.id === a.payload.id);
       if (i >= 0) state.items[i] = a.payload;
     },
-    deleteUser(state, a: PayloadAction<string>) {
+    deleteUser(state, a: PayloadAction<string | number>) {
       state.items = state.items.filter((u) => u.id !== a.payload);
     },
   },

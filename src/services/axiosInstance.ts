@@ -6,6 +6,8 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 import { ensureFreshToken, getAccessToken } from "./keycloakService";
+import { getApiErrorMessage } from "@/utils/apiError";
+import { toast } from "sonner";
 
 interface RetryableConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -20,6 +22,29 @@ const axiosInstance = axios.create({
   },
   withCredentials: false,
 });
+
+// A burst of parallel 401s must surface as a single toast, not a stack.
+const UNAUTHORIZED_TOAST_ID = "api-unauthorized";
+
+function showUnauthorizedToast(error: AxiosError) {
+  toast.error(
+    getApiErrorMessage(
+      error,
+      "You are not authorized to perform this request.",
+    ),
+    {
+      id: UNAUTHORIZED_TOAST_ID,
+      description: "Your session may have expired. Please sign in again.",
+      position: "top-center",
+      duration: 6000,
+      classNames: {
+        toast: "!gap-2 !py-4 !pl-5 !pr-4",
+        title: "!text-base !font-semibold !leading-snug",
+        description: "!mt-0.5 !text-sm",
+      },
+    },
+  );
+}
 
 // ─── Request interceptor ──────────────────────────────────────────────────────
 axiosInstance.interceptors.request.use(
@@ -54,25 +79,27 @@ axiosInstance.interceptors.response.use(
     console.error(
       "[API Response Error]",
       error.response?.data,
-      error.config.url,
+      error.config?.url,
       error.message,
       error,
     );
     const originalRequest = error.config as RetryableConfig | undefined;
 
-    // Only handle 401 Unauthorized
-    if (error.response?.status !== 401 || !originalRequest) {
+    // Refresh/retry 401 responses once, then show the API's final message.
+    if (error.response?.status !== 401) {
       return Promise.reject(error);
     }
 
-    // Infinite-loop guard
-    if (originalRequest._retry) {
-      const { performLogout } = await import("./keycloakService");
-      const { store } = await import("@/store");
-      const { logout } = await import("@/store/slices/authSlice");
+    // Retry an unauthorized request once with a refreshed token. An API 401
+    // does not by itself mean the Keycloak session should be logged out; the
+    // caller needs the response so it can show the server's error message.
+    if (!originalRequest) {
+      showUnauthorizedToast(error);
+      return Promise.reject(error);
+    }
 
-      store.dispatch(logout());
-      await performLogout();
+    if (originalRequest._retry) {
+      showUnauthorizedToast(error);
       return Promise.reject(error);
     }
 
@@ -82,12 +109,7 @@ axiosInstance.interceptors.response.use(
     const refreshed = await ensureFreshToken();
 
     if (!refreshed) {
-      const { performLogout } = await import("./keycloakService");
-      const { store } = await import("@/store");
-      const { logout } = await import("@/store/slices/authSlice");
-
-      store.dispatch(logout());
-      await performLogout();
+      showUnauthorizedToast(error);
       return Promise.reject(error);
     }
 

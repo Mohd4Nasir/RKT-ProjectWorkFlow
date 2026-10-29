@@ -27,7 +27,7 @@ export function DeleteConfirmModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-600">
+          <DialogTitle className="flex items-center gap-2 text-danger">
             <AlertTriangle className="h-5 w-5" />
             Confirm Delete
           </DialogTitle>

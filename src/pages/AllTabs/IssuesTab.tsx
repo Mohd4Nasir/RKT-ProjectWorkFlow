@@ -20,17 +20,17 @@ interface Issue {
 interface Props { projectId: string; }
 
 const priorityConfig = {
-  low:      { label: 'Low',      cls: 'bg-slate-100  text-slate-600  border-slate-200' },
-  medium:   { label: 'Medium',   cls: 'bg-amber-100  text-amber-700  border-amber-200' },
-  high:     { label: 'High',     cls: 'bg-orange-100 text-orange-700 border-orange-200' },
-  critical: { label: 'Critical', cls: 'bg-red-100    text-red-700    border-red-200'   },
+  low:      { label: 'Low',      cls: 'bg-slate-100  text-paragraph  border-slate-200' },
+  medium:   { label: 'Medium',   cls: 'bg-amber-100  text-warning  border-amber-200' },
+  high:     { label: 'High',     cls: 'bg-orange-100 text-warning border-orange-200' },
+  critical: { label: 'Critical', cls: 'bg-red-100    text-danger    border-red-200'   },
 };
 
 const statusConfig = {
-  open:        { label: 'Open',        cls: 'bg-blue-100    text-blue-700    border-blue-200'    },
-  'in-progress':{ label: 'In Progress', cls: 'bg-amber-100  text-amber-700  border-amber-200'  },
-  resolved:    { label: 'Resolved',    cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  closed:      { label: 'Closed',      cls: 'bg-slate-100   text-slate-600   border-slate-200'   },
+  open:        { label: 'Open',        cls: 'bg-blue-100    text-info    border-blue-200'    },
+  'in-progress':{ label: 'In Progress', cls: 'bg-amber-100  text-warning  border-amber-200'  },
+  resolved:    { label: 'Resolved',    cls: 'bg-emerald-100 text-success border-emerald-200' },
+  closed:      { label: 'Closed',      cls: 'bg-slate-100   text-paragraph   border-slate-200'   },
 };
 
 export function IssuesTab({ projectId }: Props) {
@@ -72,7 +72,7 @@ export function IssuesTab({ projectId }: Props) {
           <h3 className="text-lg font-semibold">Issues</h3>
           <p className="text-sm text-muted-foreground mt-0.5">Track bugs and blockers</p>
         </div>
-        <Button onClick={handleCreate} className="bg-[#E07B39] hover:bg-[#E07B39]/90 text-white" size="sm">
+        <Button onClick={handleCreate} className="bg-brand-cta hover:bg-brand-cta/90 text-white" size="sm">
           <Plus className="h-4 w-4 mr-2" /> Report Issue
         </Button>
       </div>
@@ -152,7 +152,7 @@ export function IssuesTab({ projectId }: Props) {
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(issue.id)}>
                     <Edit className="h-3.5 w-3.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:bg-red-50" onClick={() => handleDelete(issue.id)}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-danger hover:bg-red-50" onClick={() => handleDelete(issue.id)}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>

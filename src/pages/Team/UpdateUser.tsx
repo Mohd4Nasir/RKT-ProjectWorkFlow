@@ -12,7 +12,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { User } from '@/types/ProejctsType';
+import { User, UserRole } from '@/types/ProejctsType';
 import { toast } from 'sonner';
 
 interface UpdateUserProps {
@@ -26,9 +26,9 @@ export function UpdateUser({ user, trigger }: UpdateUserProps) {
   const [form, setForm] = useState({
     name: '',
     email: '',
-    role: 'user' as const,
+    role: 'user' as UserRole,
     department: '',
-    status: 'active' as const,
+    status: 'active' as 'active' | 'inactive',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 

@@ -46,7 +46,7 @@ export function TaskCard({ task, users, onClick }: TaskCardProps) {
             <StatusIcon
               className={cn(
                 'h-4 w-4 flex-shrink-0',
-                task.status === 'done' ? 'text-emerald-500' : 'text-muted-foreground'
+                task.status === 'done' ? 'text-success' : 'text-muted-foreground'
               )}
             />
             <CardTitle className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors">

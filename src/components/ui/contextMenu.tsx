@@ -56,19 +56,19 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
             onClick={() => { item.onClick(); onClose(); }}
             className={cn(
               'w-full flex items-center justify-between gap-2 px-3 py-2 text-[13px] hover:bg-slate-50 transition-colors text-left',
-              item.variant === 'danger' ? 'text-red-500 hover:bg-red-50' : 'text-slate-700'
+              item.variant === 'danger' ? 'text-danger hover:bg-red-50' : 'text-heading'
             )}
           >
             <span className="flex items-center gap-2.5">
               {item.icon && (
-                <span className={cn('flex-shrink-0', item.variant === 'danger' ? 'text-red-500' : 'text-slate-400')}>
+                <span className={cn('flex-shrink-0', item.variant === 'danger' ? 'text-danger' : 'text-muted-foreground')}>
                   {item.icon}
                 </span>
               )}
               {item.label}
             </span>
             {item.shortcut && (
-              <span className="text-[11px] text-slate-400 font-mono whitespace-nowrap">
+              <span className="text-[11px] text-muted-foreground font-mono whitespace-nowrap">
                 {item.shortcut}
               </span>
             )}

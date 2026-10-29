@@ -3,6 +3,8 @@ import { Plus, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { taskService } from '@/services/taskservice';
 import { T } from './Taskdetailshared';
+import { getInitials } from '@/utils/stringUtils';
+import hashString from '@/utils/HashString';
 
 /**
  * Uses these taskService methods (see taskservice.ts):
@@ -68,21 +70,9 @@ const AVATAR_PALETTE = [
   '#DCEFFB', // sky
 ];
 
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash);
-}
 
-function getInitials(name: string): string {
-  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
+
+
 
 function InitialsAvatar({ name, id }: { name: string; id: string | number }) {
   const color = AVATAR_PALETTE[hashString(String(id) + name) % AVATAR_PALETTE.length];

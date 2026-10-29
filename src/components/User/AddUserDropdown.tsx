@@ -21,7 +21,8 @@ interface AddMemberDialogProps {
   onOpenChange: (open: boolean) => void;
   availableUsers: User[];
   roles: string[];
-  onAddMember: (userId: string, role: string) => void;
+  onAddMember: (userId: string, role: string) => void | Promise<void>;
+  isSubmitting?: boolean;
 }
 
 export function AddMemberDialog({ 
@@ -29,7 +30,8 @@ export function AddMemberDialog({
   onOpenChange, 
   roles, 
   availableUsers, 
-  onAddMember 
+  onAddMember,
+  isSubmitting = false,
 }: AddMemberDialogProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -63,11 +65,11 @@ export function AddMemberDialog({
 
   // Handle add member
   const handleAddMember = useCallback(() => {
-    if (!selectedUserId) return;
+    if (!selectedUserId || isSubmitting) return;
     
     onAddMember(selectedUserId, memberRole);
     resetForm();
-  }, [selectedUserId, memberRole, onAddMember, resetForm]);
+  }, [selectedUserId, memberRole, onAddMember, resetForm, isSubmitting]);
 
   // Handle close with reset
   const handleClose = useCallback(() => {
@@ -81,22 +83,22 @@ export function AddMemberDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent 
-        className="sm:max-w-md p-0 overflow-hidden gap-0 border-[#b8c1ec]" 
+        className="sm:max-w-md p-0 overflow-hidden gap-0 border-brand-line" 
       >
         {/* Header */}
-        <div className="relative px-6 pt-6 pb-5 bg-[#efecf5]">
+        <div className="relative px-6 pt-6 pb-5 bg-brand-surface">
           <div className="relative flex items-start gap-4">
             <div 
-              className="h-12 w-12 rounded-xl flex items-center justify-center bg-[#eebbc3]"
+              className="h-12 w-12 rounded-xl flex items-center justify-center bg-brand-accent"
             >
-              <UserRoundPlus className="h-6 w-6 text-[#232946]" />
+              <UserRoundPlus className="h-6 w-6 text-heading" />
             </div>
             <div className="flex-1">
               <DialogHeader className="space-y-1">
-                <DialogTitle className="text-xl font-bold tracking-tight text-[#232946]">
+                <DialogTitle className="text-xl font-bold tracking-tight text-heading">
                   Add Team Member
                 </DialogTitle>
-                <DialogDescription className="text-[#232946]">
+                <DialogDescription className="text-heading">
                   Add users to collaborate on this project
                 </DialogDescription>
               </DialogHeader>
@@ -105,36 +107,36 @@ export function AddMemberDialog({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 space-y-4 bg-[#fffffe]">
+        <div className="px-6 py-5 space-y-4 bg-background">
           {/* Search Users */}
           <div className="space-y-2">
-            <Label className="text-xs font-semibold uppercase tracking-wider text-[#232946]">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-heading">
               Search Users
             </Label>
             <div className="relative">
               <Search 
-                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#232946]" 
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-heading" 
               />
               <Input
                 placeholder="Search by name, email, or department..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 border-2 border-[#b8c1ec] h-11 text-[#232946] placeholder:text-[#b8c1ec] focus-visible:ring-[#eebbc3] focus-visible:border-[#eebbc3]"
+                className="pl-9 border-2 border-brand-line h-11 text-heading placeholder:text-brand-line focus-visible:ring-brand-accent focus-visible:border-brand-accent"
               />
             </div>
           </div>
 
           {/* User List */}
           <div className="space-y-2">
-            <Label className="text-xs font-semibold uppercase tracking-wider text-[#232946]">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-heading">
               Select User
             </Label>
             <div 
-              className="max-h-64 overflow-y-auto space-y-2 rounded-lg p-2 border-2 border-[#b8c1ec]"
+              className="max-h-64 overflow-y-auto space-y-2 rounded-lg p-2 border-2 border-brand-line"
             >
               {filteredUsers.length === 0 ? (
-                <div className="text-center py-8 text-sm text-[#232946]">
-                  <Users className="h-8 w-8 mx-auto mb-2 text-[#b8c1ec]" />
+                <div className="text-center py-8 text-sm text-heading">
+                  <Users className="h-8 w-8 mx-auto mb-2 text-brand-line" />
                   {searchTerm ? 'No users match your search' : 'No users available to add'}
                 </div>
               ) : (
@@ -149,27 +151,27 @@ export function AddMemberDialog({
                       className={cn(
                         'flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all border-2',
                         isSelected
-                          ? 'border-[#eebbc3] bg-[#eebbc3]/20'
-                          : 'border-transparent hover:border-[#eebbc3]/50 hover:bg-[#eebbc3]/5'
+                          ? 'border-brand-accent bg-brand-accent/20'
+                          : 'border-transparent hover:border-brand-accent/50 hover:bg-brand-accent/5'
                       )}
                     >
                       <UserAvatar name={user.name} size="md" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm text-[#232946]">
+                        <div className="font-medium text-sm text-heading">
                           {user.name}
                         </div>
-                        <div className="text-xs text-[#232946]">
+                        <div className="text-xs text-heading">
                           {user.email}
                         </div>
                         {user.department && (
-                          <div className="text-xs text-[#232946]">
+                          <div className="text-xs text-heading">
                             {user.department}
                           </div>
                         )}
                       </div>
                       {isSelected && (
-                        <div className="h-5 w-5 rounded-full bg-[#eebbc3] flex items-center justify-center flex-shrink-0">
-                          <Check className="h-3 w-3 text-[#232946]" />
+                        <div className="h-5 w-5 rounded-full bg-brand-accent flex items-center justify-center flex-shrink-0">
+                          <Check className="h-3 w-3 text-heading" />
                         </div>
                       )}
                     </div>
@@ -181,7 +183,7 @@ export function AddMemberDialog({
 
           {/* Role Selection */}
           <div className="space-y-2">
-            <Label className="text-xs font-semibold uppercase tracking-wider text-[#232946]">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-heading">
               Role
             </Label>
             <Select
@@ -189,16 +191,16 @@ export function AddMemberDialog({
               onValueChange={setMemberRole}
             >
               <SelectTrigger
-                className="border-2 border-[#b8c1ec] focus:ring-[#eebbc3] focus:ring-offset-0 h-11 text-[#232946]"
+                className="border-2 border-brand-line focus:ring-brand-accent focus:ring-offset-0 h-11 text-heading"
               >
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
-              <SelectContent className="border-[#b8c1ec]">
+              <SelectContent className="border-brand-line">
                 {roles.map((role) => (
                   <SelectItem 
                     key={role} 
                     value={role}
-                    className="hover:bg-[#eebbc3]/10 focus:bg-[#eebbc3]/10 text-[#232946]"
+                    className="hover:bg-brand-accent/10 focus:bg-brand-accent/10 text-heading"
                   >
                     {role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()}
                   </SelectItem>
@@ -210,22 +212,23 @@ export function AddMemberDialog({
 
         {/* Footer */}
         <DialogFooter 
-          className="px-6 py-4 border-t border-[#b8c1ec] bg-[#efecf5]"
+          className="px-6 py-4 border-t border-brand-line bg-brand-surface"
         >
           <Button 
             variant="outline" 
             onClick={handleClose}
-            className="border-2 border-[#b8c1ec] hover:bg-[#eebbc3]/10 hover:text-[#232946] h-10 text-[#232946]"
+            disabled={isSubmitting}
+            className="border-2 border-brand-line hover:bg-brand-accent/10 hover:text-heading h-10 text-heading"
           >
             Cancel
           </Button>
           <Button
             onClick={handleAddMember}
-            disabled={!selectedUserId}
-            className="bg-[#eebbc3] text-[#232946] hover:bg-[#dbaab2] transition-all duration-200 h-10"
+            disabled={!selectedUserId || isSubmitting}
+            className="bg-brand-accent text-heading hover:bg-brand-accent-strong transition-all duration-200 h-10"
           >
             <UserPlus className="h-4 w-4 mr-2" />
-            Add Member
+            {isSubmitting ? 'Adding...' : 'Add Member'}
           </Button>
         </DialogFooter>
       </DialogContent>

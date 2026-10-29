@@ -11,7 +11,6 @@ export { ProjectDialog } from './ProjectDialog';
 export { ProjectTabs } from './ProjectTabs';
 export { TableToolbar } from './TableToolbar';
 export { ProjectsFilterDrawer } from './ProjectsFilterDrawer';
-export { PublicProjectsTable } from './PublicProjectsTable';
 export { ProjectActionCell } from './ProjectActionCell';
 export {
   useProjectsFilter, useFilterState, emptyFilterValues, matchPredicates,

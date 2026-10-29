@@ -90,11 +90,11 @@ export default function Dashboard() {
       <PageHeader
         title={`${greeting()}, ${user.name.split(' ')[0]} 👋`}
         subtitle={isAdmin ? "Here's what's happening across your organization today." : "Here's an overview of your work."}
-        actions={
-          <Button className="bg-primary hover:opacity-95 shadow-glow" asChild>
-            <Link to="/projects"><Plus className="h-4 w-4 mr-1" /> New Project</Link>
-          </Button>
-        }
+        // actions={
+        //   <Button className="bg-primary hover:opacity-95 shadow-glow" asChild>
+        //     <Link to="/projects"><Plus className="h-4 w-4 mr-1" /> New Project</Link>
+        //   </Button>
+        // }
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

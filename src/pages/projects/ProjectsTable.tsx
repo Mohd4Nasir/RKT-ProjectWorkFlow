@@ -18,6 +18,8 @@ import { Project, Users } from '@/types/ProejctsType';
 import { InlineEdit } from '@/components/cells/InlineEdit';
 import { DatePickerCell } from '@/components/cells/DatePickerCell';
 import { CountBar, PillEmpty } from './CountBar';
+import { getInitials } from '@/utils/stringUtils';
+import hashString from '@/utils/HashString';
 
 export type ProjectStatsMap = Record<
   string,
@@ -43,29 +45,13 @@ function projectCode(project: Project): string {
   return `PRI-${String(id).padStart(3, '0')}`;
 }
 
-/** Turns "Nasir Rajput" into "NR". */
-function getInitials(name: string): string {
-  return (name || '')
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
-}
+
 
 /**
  * Tiny deterministic string hash — same input always picks the same
  * palette color, so a given owner or status keeps its color even when
  * rows re-sort, re-filter, or re-paginate.
  */
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i += 1) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash);
-}
 
 /**
  * The 3 on-brand colors from index.css: primary (pink), secondary
@@ -118,7 +104,7 @@ function OwnersCell({ owners }: { owners: Owner[] }) {
         {getInitials(first.ownerName)}
       </div>
       <div className="flex items-center gap-1 min-w-0">
-        <span className="truncate text-sm">{first.ownerName}</span>
+        <span className="truncate text-sm text-foreground">{first.ownerName}</span>
         {rest.length > 0 && (
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -183,7 +169,7 @@ export function ProjectsTable({
       onProjectClick(String(projectId));
     }
   };
- console.log('ProjectsTable rendering with projects:', projects);
+//  console.log('ProjectsTable rendering with projects:', projects);
   const columns = useMemo(
     () => [
       columnHelper.accessor('projectId', {
@@ -360,38 +346,38 @@ export function ProjectsTable({
         size: 130,
       }),
 
-      columnHelper.display({
-        id: 'actions',
-        header: '',
-        cell: ({ row }) => {
-          const p = row.original;
-          return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(p)}>
-                  <Edit2 className="h-3.5 w-3.5 mr-2" /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-danger focus:text-danger"
-                  onClick={() => onDelete(p.projectId)}
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          );
-        },
-        size: 50,
-      }),
+      // columnHelper.display({
+      //   id: 'actions',
+      //   header: '',
+      //   cell: ({ row }) => {
+      //     const p = row.original;
+      //     return (
+      //       <DropdownMenu>
+      //         <DropdownMenuTrigger asChild>
+      //           <Button
+      //             variant="outline"
+      //             size="icon"
+      //             className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+      //           >
+      //             <MoreHorizontal className="h-4 w-4" />
+      //           </Button>
+      //         </DropdownMenuTrigger>
+      //         <DropdownMenuContent align="end">
+      //           <DropdownMenuItem onClick={() => onEdit(p)}>
+      //             <Edit2 className="h-3.5 w-3.5 mr-2" /> Edit
+      //           </DropdownMenuItem>
+      //           <DropdownMenuItem
+      //             className="text-danger focus:text-danger"
+      //             onClick={() => onDelete(p.projectId)}
+      //           >
+      //             <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
+      //           </DropdownMenuItem>
+      //         </DropdownMenuContent>
+      //       </DropdownMenu>
+      //     );
+      //   },
+      //   size: 50,
+      // }),
     ],
     [users, stats, onUpdate, onEdit, onDelete, onProjectClick],
   );

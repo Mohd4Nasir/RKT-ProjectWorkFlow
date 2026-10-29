@@ -12,8 +12,8 @@ import { cn } from '@/lib/utils';
 
 interface OwnerSelectProps {
   users: User[];
-  value: string;
-  onChange: (id: string) => void;
+  value: string | number;
+  onChange: (id: string | number) => void;
   className?: string;
 }
 

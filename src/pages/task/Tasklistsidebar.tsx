@@ -37,9 +37,9 @@ export function TaskListSidebar({
   );
 
   return (
-    <div className="w-80 flex-shrink-0 flex flex-col bg-[#F9F7FD]">
+    <div className="w-80 flex-shrink-0 flex flex-col bg-brand-surface">
       <div
-        className=" pb-3 relative z-[110] bg-[#F9F7FD]"
+        className=" pb-3 relative z-[110] bg-brand-surface"
         style={{ borderBottom: `1px solid ${T.navy}14` }}
       >
         <div className="flex items-center gap-2 px-2 bg-secondary-55 mb-3 border-b-2 py-3.5 flex-shrink-0"

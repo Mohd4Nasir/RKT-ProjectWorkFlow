@@ -6,7 +6,8 @@ import { PersistGate } from 'redux-persist/integration/react';
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { store, persistor, useAppSelector } from '@/store';
+import { store, persistor, useAppSelector, useAppDispatch } from '@/store';
+import { setTheme } from '@/store/slices/uiSlice';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { KeycloakProvider } from '@/providers/KeycloakProvider';  // ✅ NEW
@@ -20,8 +21,7 @@ const Projects = lazy(() => import('./pages/projects/Projects'));
 const ProjectDetails = lazy(() => import('./pages/projects/ProjectDetails'));
 const Tasks = lazy(() => import('./pages/Tasks'));
 const Users = lazy(() => import('./pages/Team/Users'));
-const Reports = lazy(() => import('./pages/Reports'));
-const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const ModuleUnderDevelopment = lazy(() => import('./pages/ModuleUnderDevelopment'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -30,8 +30,26 @@ const Files = lazy(() => import('./pages/Files'));
 const queryClient = new QueryClient();
 
 function ThemeBoot() {
+  const dispatch = useAppDispatch();
   const theme = useAppSelector((s) => s.ui.theme);
-  useEffect(() => { document.documentElement.classList.toggle('dark', theme === 'dark'); }, [theme]);
+
+  // The pre-paint script in index.html already decided the theme (falling back
+  // to the OS preference). Adopt that on the very first render so a dark-mode
+  // visitor isn't reverted to light just because redux-persist hasn't rehydrated
+  // yet. Light is the slice default, so only the dark case needs adopting.
+  useEffect(() => {
+    if (theme === 'light' && document.documentElement.classList.contains('dark')) {
+      dispatch(setTheme('dark'));
+    }
+    // Intentionally first-render only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Single owner of the `dark` class.
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
+
   return null;
 }
 
@@ -71,7 +89,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner position="top-right" />
-          <BrowserRouter future={{
+          <BrowserRouter  future={{
             v7_startTransition:true,v7_relativeSplatPath: true,
 }}>
             <ThemeBoot />
@@ -88,12 +106,13 @@ const App = () => (
                   <Route path="/tasks" element={<ProtectedRoute roles={['admin']}><Tasks /></ProtectedRoute>} />
                   <Route path="/my-tasks" element={<Tasks mine />} />
                   <Route path="/users" element={<ProtectedRoute roles={['admin']}><Users /></ProtectedRoute>} />
-                  <Route path="/reports" element={<ProtectedRoute roles={['admin']}><Reports /></ProtectedRoute>} />
-                  <Route path="/calendar" element={<CalendarPage />} />
+                  <Route path="/reports" element={<ModuleUnderDevelopment />} />
+                  <Route path="/calendar" element={<ModuleUnderDevelopment />} />
                   <Route path="/files" element={<Files />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="*" element={<ModuleUnderDevelopment />} />
                 </Route>
 
                 <Route path="*" element={<NotFound />} />

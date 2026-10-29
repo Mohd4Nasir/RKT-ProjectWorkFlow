@@ -34,10 +34,45 @@
 
   --radius: .9rem;
   /* inside :root, alongside your other colors */
---card: 0 0% 100%;
---card-foreground: 223 100% 17%;
---popover: 0 0% 100%;
---popover-foreground: 223 100% 17%;
+  --card: 0 0% 100%;
+  --card-foreground: 223 100% 17%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 223 100% 17%;
+  --surface: 20 45% 97%;
+
+  --primary-foreground: 223 100% 17%;
+  --primary-hover: 337 84% 78%;
+  --primary-soft: 337 84% 94%;
+
+  /* Foreground inks for the secondary/accent surfaces. Without these the
+     `secondary` button variant and the ghost/outline `hover:text-*` states
+     resolve to an invalid value in light mode and silently inherit. */
+  --secondary-foreground: 223 100% 17%;
+  --accent-foreground: 223 100% 17%;
+
+  /* Semantic — light mode (dark overrides live in .dark below) */
+  --muted: 20 45% 94%;
+  --muted-foreground: 224 25% 42%;
+
+  --success: 152 60% 34%;            /* green */
+  --success-foreground: 0 0% 100%;
+  --warning: 40 92% 48%;             /* yellow / amber */
+  --warning-foreground: 223 100% 17%;
+  --danger: 0 72% 50%;               /* red */
+  --danger-foreground: 0 0% 100%;
+  --info: 212 78% 46%;               /* blue */
+  --info-foreground: 0 0% 100%;
+  --destructive: 0 72% 50%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* Brand accents — the lavender/rose sub-palette used by dialogs & boards.
+     Promoted from hardcoded hexes so they can respond to the theme. */
+  --brand-accent: 353 62% 82%;         /* rose #eebbc3 */
+  --brand-accent-strong: 353 50% 76%;  /* rose hover #dbaab2 */
+  --brand-line: 233 62% 80%;           /* periwinkle #b8c1ec */
+  --brand-surface: 250 33% 95%;        /* lavender #efecf5 */
+  --brand-cta: 24 78% 55%;             /* orange #E07B39 */
+
 
     /* Sidebar - deep purple brand */
     --sidebar-background: 270 45% 22%;
@@ -94,6 +129,18 @@
 
   --card: 223 28% 11%;
   --card-foreground: var(--heading);
+  --popover: 223 28% 11%;
+  --popover-foreground: var(--heading);
+  --surface: 223 30% 8%;
+
+  --primary-soft: 337 40% 18%;
+
+  /* Brand accents, dimmed for dark surfaces */
+  --brand-accent: 353 32% 34%;
+  --brand-accent-strong: 353 30% 42%;
+  --brand-line: 233 26% 34%;
+  --brand-surface: 250 18% 15%;
+  --brand-cta: 24 70% 46%;
 
   --muted: 223 20% 16%;
   --muted-foreground: 224 15% 65%;
@@ -123,6 +170,11 @@
   --sidebar-border: 223 30% 16%;
   --sidebar-ring: 337 60% 68%;
   --sidebar-muted: 224 15% 60%;
+
+  /* Gradients — the light-mode stops are far too bright on a dark canvas */
+  --gradient-primary: linear-gradient(135deg, hsl(337 60% 45%), hsl(300 55% 38%));
+  --gradient-soft: linear-gradient(135deg, hsl(337 30% 16%), hsl(260 30% 13%));
+  --gradient-success: linear-gradient(135deg, hsl(160 60% 32%), hsl(160 60% 24%));
 
   --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.4);
   --shadow: 0 4px 14px hsl(0 0% 0% / 0.4);
@@ -170,6 +222,29 @@
     box-shadow: var(--shadow);
   }
 
+  /* Project grid card surface — flat soft pink / peach, matching the
+     33% tints of --primary and --secondary baked onto white. */
+  .project-card-surface {
+    background: #fbefea;
+  }
+
+  .project-card-surface-alt {
+    background: #fbd3e2;
+  }
+
+  .project-card-band {
+    background: rgba(255, 255, 255, 0.55);
+  }
+
+  .dark .project-card-surface,
+  .dark .project-card-surface-alt {
+    background: hsl(var(--card));
+  }
+
+  .dark .project-card-band {
+    background: hsl(var(--card) / 0.6);
+  }
+
   .stat-icon {
     @apply h-11 w-11 rounded-xl grid place-items-center;
   }
@@ -183,5 +258,11 @@
     background: hsl(var(--border));
     border-radius: 8px;
   }
-  
+
+  /* Firefox equivalents — without these the thumb falls back to the
+     browser default, which is tuned for light backgrounds. */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
 }

@@ -61,6 +61,10 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        muted: {
+          DEFAULT: "hsl(var(--muted) / <alpha-value>)",
+          foreground: "hsl(var(--muted-foreground) / <alpha-value>)",
+        },
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
@@ -86,6 +90,13 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
+        },
+        brand: {
+          accent: "hsl(var(--brand-accent) / <alpha-value>)",
+          "accent-strong": "hsl(var(--brand-accent-strong) / <alpha-value>)",
+          line: "hsl(var(--brand-line) / <alpha-value>)",
+          surface: "hsl(var(--brand-surface) / <alpha-value>)",
+          cta: "hsl(var(--brand-cta) / <alpha-value>)",
         },
       },
       backgroundImage: {

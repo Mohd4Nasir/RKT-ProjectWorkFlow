@@ -34,13 +34,13 @@ export const DatePickerCell = memo(function DatePickerCell({
             'hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-all',
             'focus:outline-none focus:ring-2 focus:ring-primary/30',
             !date && 'text-muted-foreground',
-            isOverdue && 'text-red-600 font-semibold',
+            isOverdue && 'text-danger font-semibold',
             className,
           )}
         >
           <CalendarIcon className={cn(
             'h-3.5 w-3.5 flex-shrink-0 transition-colors',
-            isOverdue ? 'text-red-400' : 'text-muted-foreground group-hover:text-primary',
+            isOverdue ? 'text-danger' : 'text-muted-foreground group-hover:text-primary',
           )} />
           <span className="truncate">
             {date ? format(date, 'dd MMM yyyy') : placeholder}

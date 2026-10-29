@@ -41,6 +41,7 @@ const TASK_TABS: { id: TaskTab; label: string }[] = [
 export const TaskDetailPanel = memo(function TaskDetailPanel({
   task, users, project, onClose, onUpdate, onSelectTask,
 }: TaskDetailPanelProps) {
+    console.log('PANEL RENDER', task?.taskId, project);
   const [tab, setTab] = useState<TaskTab>('comments');
   const [showInfo, setShowInfo] = useState(true);
   const [comment, setComment] = useState('');
@@ -179,7 +180,7 @@ const subtaskRoot: FullTreeNode | null = (() => {
         />
 
         {/* ══════════ MAIN CONTENT ══════════ */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-[#F9F7FD]">
+        <div className="flex-1 flex flex-col overflow-hidden bg-brand-surface">
           {/* Top bar */}
           <div
             className="flex items-center gap-2 px-4 bg-secondary-55 border-b-2 py-2.5 flex-shrink-0"
@@ -197,7 +198,7 @@ const subtaskRoot: FullTreeNode | null = (() => {
                 onClick={onClose}
                 className="h-7 w-7 rounded flex items-center justify-center transition-colors"
                 style={{ color: `${T.para}99` }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fde2e8'; e.currentTarget.style.color = '#c23a5e'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fde2e8'; e.currentTarget.style.color = 'hsl(var(--danger))'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = `${T.para}99`; }}
               >
                 <X className="h-3.5 w-3.5" />
@@ -387,7 +388,7 @@ const subtaskRoot: FullTreeNode | null = (() => {
                     {tabLoading.comments ? (
                       <p className="text-xs text-center py-4" style={{ color: `${T.para}77` }}>Loading comments…</p>
                     ) : tabError.comments ? (
-                      <p className="text-xs text-center py-4" style={{ color: '#c23a5e' }}>{tabError.comments}</p>
+                      <p className="text-xs text-center py-4" style={{ color: 'hsl(var(--danger))' }}>{tabError.comments}</p>
                     ) : ((tabData.comments?.data || [])).length === 0 ? (
                       <p className="text-xs text-center py-4" style={{ color: `${T.para}77` }}>No comments yet.</p>
                     ) : (
@@ -423,7 +424,7 @@ const subtaskRoot: FullTreeNode | null = (() => {
                     {tabLoading.subtasks ? (
                       <p className="text-xs text-center py-4" style={{ color: `${T.para}77` }}>Loading subtasks…</p>
                     ) : tabError.subtasks ? (
-                      <p className="text-xs text-center py-4" style={{ color: '#c23a5e' }}>{tabError.subtasks}</p>
+                      <p className="text-xs text-center py-4" style={{ color: 'hsl(var(--danger))' }}>{tabError.subtasks}</p>
                     ) : !subtaskRoot ? (
                       <p className="text-xs text-center py-4" style={{ color: `${T.para}77` }}>No subtasks yet.</p>
                     ) : (
@@ -440,7 +441,7 @@ const subtaskRoot: FullTreeNode | null = (() => {
                         Loading {tab.replace('-', ' ')}…
                       </div>
                     ) : tabError[tab] ? (
-                      <div className="flex items-center justify-center py-8 text-xs" style={{ color: '#c23a5e' }}>
+                      <div className="flex items-center justify-center py-8 text-xs" style={{ color: 'hsl(var(--danger))' }}>
                         {tabError[tab]}
                       </div>
                     ) : (

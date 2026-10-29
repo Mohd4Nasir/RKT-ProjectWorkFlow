@@ -15,8 +15,8 @@ export interface CreateProjectDto {
 }
   // Fixed version with proper error handling and types
 interface AddProjectMemberParams {
-  projectId: number;
-  userId: number;
+  projectId: string | number;
+  userId: string | number;
   projectRole: string;
 }
 
@@ -31,7 +31,29 @@ interface AddProjectMemberResponse {
   };
   message?: string;
 }
+
+export interface RemoveProjectMemberParams {
+  projectId: string | number;
+  userId: string | number;
+}
+
+export interface RemoveProjectMemberResponse {
+  success: boolean;
+  message?: string;
+}
+
+export interface UpdateProjectMemberParams {
+  projectId: string | number;
+  userId: string | number;
+  projectRole: string;
+}
+
+// TODO: confirm this path with the backend. The member-update endpoint was not
+// provided, so it is guessed to mirror /team/add-member. Change this one
+// constant to repoint the whole feature.
+const TEAM_UPDATE_MEMBER_ENDPOINT = '/team/update-member-role';
 export interface UpdateProjectDto {
+  projectId: string | number;
   projectTitle?: string;
   projectDescription?: string;
   status?: string;
@@ -60,7 +82,18 @@ export const projectApiService = {
       throw error;
     }
   },
-   getMembersForProject: async (projectId: string) => {
+
+  getProjectDetailsHeader: async (projectId: string): Promise<Project> => {
+    try {
+      const response = await axiosInstance.get(`/project/${projectId}`);
+      return response.data;
+    } catch (error) { 
+
+      console.error(`Get project details for ${projectId} error:`, error);
+      throw error;
+    } 
+  },
+   getMembersForProject: async (projectId: string | number) => {
     try {
       const response = await axiosInstance.get(`/team/${projectId}/get-not-assigned-users`);
       return response.data;
@@ -70,7 +103,7 @@ export const projectApiService = {
     }
   },
 
- getExistingMembersInProject: async (projectId: string) => {
+  getExistingMembersInProject: async (projectId: string | number) => {
  console.log(`Fetching existing members for project ${projectId}`);
     try {
       const response = await axiosInstance.get(`/team/${projectId}`);
@@ -154,6 +187,86 @@ addProjectMember: async ({ projectId, userId, projectRole }: AddProjectMemberPar
   }
 },
 
+removeProjectMember: async ({ projectId, userId }: RemoveProjectMemberParams): Promise<RemoveProjectMemberResponse> => {
+  try {
+    if (!projectId || !userId) {
+      throw new Error('Missing required fields: projectId or userId');
+    }
+
+    console.log(`Removing member ${userId} from project ${projectId}`);
+
+    const response = await axiosInstance.delete<RemoveProjectMemberResponse>(
+      "/team/remove-member",
+      { data: { projectId, userId } }
+    );
+
+    if (response.data?.success === false) {
+      throw new Error(response.data?.message || 'Failed to remove member');
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error(`Error removing member ${userId} from project ${projectId}:`, {
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      params: { projectId, userId }
+    });
+
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else if (error.response?.status === 404) {
+      throw new Error('Project or user not found');
+    } else if (error.response?.status === 403) {
+      throw new Error('You do not have permission to remove members from this project');
+    } else if (error.code === 'ECONNABORTED') {
+      throw new Error('Request timed out. Please try again.');
+    } else {
+      throw new Error(error.message || 'Failed to remove member from project');
+    }
+  }
+},
+
+updateProjectMember: async ({ projectId, userId, projectRole }: UpdateProjectMemberParams): Promise<RemoveProjectMemberResponse> => {
+  try {
+    if (!projectId || !userId || !projectRole) {
+      throw new Error('Missing required fields: projectId, userId, or projectRole');
+    }
+
+    console.log(`Updating member ${userId} in project ${projectId} to role ${projectRole}`);
+
+    const response = await axiosInstance.put<RemoveProjectMemberResponse>(
+      TEAM_UPDATE_MEMBER_ENDPOINT,
+      { projectId, userId, projectRole }
+    );
+
+    if (response.data?.success === false) {
+      throw new Error(response.data?.message || 'Failed to update member');
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating member ${userId} in project ${projectId}:`, {
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      params: { projectId, userId, projectRole }
+    });
+
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else if (error.response?.status === 404) {
+      throw new Error('Project or user not found');
+    } else if (error.response?.status === 403) {
+      throw new Error('You do not have permission to update members in this project');
+    } else if (error.code === 'ECONNABORTED') {
+      throw new Error('Request timed out. Please try again.');
+    } else {
+      throw new Error(error.message || 'Failed to update member');
+    }
+  }
+},
+
   // Create new project
   createProjectTask: async (data: CreateProjectDto): Promise<Project> => {
     console.log("Creating project with data:", data);
@@ -173,17 +286,22 @@ addProjectMember: async ({ projectId, userId, projectRole }: AddProjectMemberPar
 
   // Update project
   updateProject: async (
-    id: string,
-    data: UpdateProjectDto,
-  ): Promise<Project> => {
-    try {
-      const response = await axiosInstance.put(`/projects/${id}`, data);
-      return response.data;
-    } catch (error) {
-      console.error(`Update project ${id} error:`, error);
-      throw error;
-    }
-  },
+  data: UpdateProjectDto,
+): Promise<Project> => {
+  try {
+        console.log("UPDATE API BODY:", data);
+
+    const response = await axiosInstance.put(
+      `/project`,
+      data
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Update project error:", error);
+    throw error;
+  }
+},
 
   // Delete project
   deleteProject: async (id: string): Promise<void> => {
@@ -235,5 +353,22 @@ addProjectMember: async ({ projectId, userId, projectRole }: AddProjectMemberPar
       console.error(`Get activity tracker for project ${projectId} error:`, error);
       throw error;
     }
-  }
+  },
+
+getProjectStatuses: async () => {
+  const res = await axiosInstance.get('project/statuses');
+  return res.data;
+},
+  updateProjectStatus: async (payload: { projectId: number | string; projectStatus: string }) => {
+  const res = await axiosInstance.put('/project/status', payload);
+  return res.data;
+},
 };
+
+
+
+
+
+
+
+

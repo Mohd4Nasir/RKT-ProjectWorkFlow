@@ -22,6 +22,7 @@ export interface TaskNode extends SubTaskNode {
 }
 
 export interface TaskListNode {
+  titleStatus: string;
   listId: number;
   listTitle: string;
   sequence: number;

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo } from 'react';
 import { useAppSelector } from '@/store';
 import { cn } from '@/lib/utils';
@@ -6,10 +7,21 @@ import { format, isAfter } from 'date-fns';
 
 interface Props { projectId: string; }
 
+const EMPTY: any[] = [];
+
 export function ReportsTab({ projectId }: Props) {
-  const tasks     = useAppSelector(s => s.tasks.items.filter(t => t.projectId === projectId));
-  const taskLists = useAppSelector(s => s.taskLists.items.filter(tl => String(tl.projectId) === String(projectId)));
-  const users     = useAppSelector(s => s.users.items);
+  const allTasks = useAppSelector((s: any) => s.tasks?.items ?? EMPTY);
+  const allLists = useAppSelector((s: any) => s.taskLists?.items ?? EMPTY);
+  const users    = useAppSelector((s: any) => s.users?.items ?? EMPTY);
+
+  const tasks = useMemo(
+    () => allTasks.filter((t: any) => String(t.projectId) === String(projectId)),
+    [allTasks, projectId],
+  );
+  const taskLists = useMemo(
+    () => allLists.filter((tl: any) => String(tl.projectId) === String(projectId)),
+    [allLists, projectId],
+  );
 
   const stats = useMemo(() => {
     const total      = tasks.length;
@@ -45,11 +57,11 @@ export function ReportsTab({ projectId }: Props) {
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
-          { label: 'Total',       val: stats.total,      icon: BarChart3,    color: 'text-slate-600',   bg: 'bg-slate-50' },
-          { label: 'Done',        val: stats.done,       icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'In Progress', val: stats.inProgress, icon: Clock,        color: 'text-blue-600',    bg: 'bg-blue-50' },
-          { label: 'To Do',       val: stats.todo,       icon: TrendingUp,   color: 'text-violet-600',  bg: 'bg-violet-50' },
-          { label: 'Overdue',     val: stats.overdue,    icon: AlertCircle,  color: 'text-red-600',     bg: 'bg-red-50' },
+          { label: 'Total',       val: stats.total,      icon: BarChart3,    color: 'text-paragraph',   bg: 'bg-slate-50' },
+          { label: 'Done',        val: stats.done,       icon: CheckCircle2, color: 'text-success', bg: 'bg-emerald-50' },
+          { label: 'In Progress', val: stats.inProgress, icon: Clock,        color: 'text-info',    bg: 'bg-blue-50' },
+          { label: 'To Do',       val: stats.todo,       icon: TrendingUp,   color: 'text-primary',  bg: 'bg-violet-50' },
+          { label: 'Overdue',     val: stats.overdue,    icon: AlertCircle,  color: 'text-danger',     bg: 'bg-red-50' },
         ].map(s => {
           const Icon = s.icon;
           return (

@@ -1,103 +1,152 @@
 import { useEffect, useState } from 'react';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
 import { Badge } from '@/components/ui/badge';
-import { Project, Users } from '@/types/ProejctsType';
-import { useAppSelector } from '@/store';
+import { Project } from '@/types/ProejctsType';
 import { RichTextEditor } from '@/components/richeditor';
-import { Briefcase, Calendar, Globe2, Lock, Sparkles, Tag, Users2, Building2, File } from 'lucide-react';
+import { Briefcase, Calendar, File } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { projectApiService } from '@/services/projectsApiService';
+import { toast } from 'sonner';
+
+const INK = 'hsl(var(--heading))';
+const BORDER = 'hsl(var(--secondary))';
+
+const fieldStyle = {
+  border: `2px solid ${BORDER}`,
+  background: 'hsl(var(--card))',
+  color: INK,
+  borderRadius: '12px',
+};
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editing: Project | null;
-  onSave: (form: FormState) => void;
+  /** Called after a successful create/update so the parent can refresh its list. */
+  onSaved?: () => void | Promise<void>;
 }
-
 
 interface FormState {
   name: string;
   description: string;
-  status: string;
   startDate: string;
   endDate: string;
-  // tag: string;
-  // ownerId: string;
-  // access: Access;
-  // company: string;
 }
 
+const EMPTY_FORM: FormState = { name: '', description: '', startDate: '', endDate: '' };
 
+const toDateInput = (v?: string) => v?.slice(0, 10) ?? '';
 
-const empty = (ownerId: string): FormState => ({
-  name: '', description: '', status: 'active', startDate: '', endDate: '',
-  // tag: '', ownerId, access: 'private', company: COMPANIES[0],
-});
+function DateField({
+  label, value, onChange,
+}: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="space-y-2">
+      <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: INK }}>
+        <Calendar className="h-4 w-4" style={{ color: INK }} />
+        {label}
+      </Label>
+      <Input
+        type="date"
+        value={toDateInput(value)}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-12 px-4 transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0"
+        style={fieldStyle}
+      />
+    </div>
+  );
+}
 
-export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
-  const users = useAppSelector((s) => s.users.items);
-  const me = useAppSelector((s) => s.auth.user!);
+export function ProjectDialog({ open, onOpenChange, editing, onSaved }: Props) {
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [form, setForm] = useState<FormState>(empty(me.id));
-  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((p) => ({ ...p, [k]: v }));
+  const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
+    setForm((p) => ({ ...p, [k]: v }));
 
+  // Reset / prefill the form each time the dialog opens.
   useEffect(() => {
     if (!open) return;
-    if (editing) {
-      setForm({
-        name: editing.projectTitle,
-        description: editing.description,
-        status: editing.projectStatus,
-        startDate: editing.startDate,
-        endDate: editing.endDate,
-        // tag: editing.tag,
-        // ownerId: editing.ownerId,
-        // access: (editing as any).access ?? 'private',
-        // company: (editing as any).company ?? COMPANIES[0],
-      });
-    } else {
-      setForm(empty(me.id));
-    }
-  }, [open, editing, me.id]);
+    setForm(
+      editing
+        ? {
+            name: editing.projectTitle,
+            description: editing.description,
+            startDate: toDateInput(editing.startDate),
+            endDate: toDateInput(editing.endDate),
+          }
+        : EMPTY_FORM,
+    );
+  }, [open, editing]);
 
-  // const owner = users.find((u) => u.id === form.ownerId);
   const valid = form.name.trim().length > 1;
+
+  const handleSave = async () => {
+    if (!valid || isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      const base = {
+        projectTitle: form.name,
+        projectDescription: form.description,
+        startDate: toDateInput(form.startDate),
+        endDate: toDateInput(form.endDate),
+      };
+
+      if (editing) {
+        await projectApiService.updateProject({ projectId: editing.projectId, ...base });
+        toast.success('Project updated successfully!');
+      } else {
+        await projectApiService.createProjectTask(base);
+        toast.success('Project created successfully!');
+      }
+
+      // Refresh the list BEFORE closing so the change shows up right away.
+      await onSaved?.();
+      onOpenChange(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.error('Save project error:', error);
+      toast.error(
+        error?.response?.data?.message || error?.message || 'Failed to save project.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const HeaderIcon = editing ? Briefcase : File;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl p-0 overflow-hidden gap-0 max-h-[92vh] flex flex-col rounded-2xl border-none shadow-2xl">
         {/* Header */}
-        <div className="relative px-8 pt-8 pb-6" style={{ background: '#F9CBBF' }}>
-          <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: '#f582ae' }} />
-          <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl opacity-10" style={{ background: '#8bd3dd' }} />
+        <div className="relative px-8 pt-8 pb-6" style={{ background: 'hsl(var(--secondary))' }}>
+          <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: 'hsl(var(--primary))' }} />
+          <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl opacity-10" style={{ background: 'hsl(var(--accent))' }} />
 
           <div className="relative flex items-start gap-4">
-            <div className="h-14 w-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(0, 24, 88, 0.1)' }}>
-              {editing ? (
-                <Briefcase className="h-7 w-7" style={{ color: '#001858' }} />
-              ) : (
-                <File className="h-7 w-7" style={{ color: '#001858' }} />
-              )}
+            <div className="h-14 w-14 rounded-2xl flex items-center justify-center" style={{ background: 'hsl(var(--heading) / 0.1)' }}>
+              <HeaderIcon className="h-7 w-7" style={{ color: INK }} />
             </div>
             <div className="flex-1">
               <DialogHeader className="space-y-1.5">
-                <DialogTitle className="text-2xl font-bold tracking-tight" style={{ color: '#001858' }}>
+                <DialogTitle className="text-2xl font-bold tracking-tight" style={{ color: INK }}>
                   {editing ? 'Edit Project' : 'Create New Project'}
                 </DialogTitle>
-                <DialogDescription style={{ color: 'rgba(0, 24, 88, 0.7)' }}>
+                <DialogDescription style={{ color: 'hsl(var(--heading) / 0.7)' }}>
                   {editing ? 'Update project information and settings' : 'Fill in the details to get started'}
                 </DialogDescription>
               </DialogHeader>
             </div>
             <Badge
               className="px-3 py-1 text-xs font-medium border-0"
-              style={{ background: 'rgba(0, 24, 88, 0.08)', color: '#001858' }}
+              style={{ background: 'hsl(var(--heading) / 0.08)', color: INK }}
             >
               {editing ? 'Edit Mode' : 'New'}
             </Badge>
@@ -105,11 +154,11 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8" style={{ background: '#ffffff' }}>
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8 bg-card">
           {/* Project Name */}
           <div className="space-y-2">
-            <Label className="text-sm font-semibold text-[#001858]">
-              Project Name <span style={{ color: '#f582ae' }}>*</span>
+            <Label htmlFor="p-name" className="text-sm font-semibold" style={{ color: INK }}>
+              Project Name <span style={{ color: 'hsl(var(--primary))' }}>*</span>
             </Label>
             <div className="relative">
               <Input
@@ -117,17 +166,12 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
                 value={form.name}
                 onChange={(e) => set('name', e.target.value)}
                 placeholder="Enter project name..."
-                className="h-12 px-4 text-base transition-all  text-[#001858] duration-200 focus-visible:ring-0 focus-visible:ring-offset-0"
-                style={{
-                  border: '2px solid #f3d2c1',
-                  background: '#ffffff',
-                  color: '#001858',
-                  borderRadius: '12px'
-                }}
+                className="h-12 px-4 text-base transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0"
+                style={fieldStyle}
               />
               {form.name && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-[#8bd3dd] flex items-center justify-center">
-                  <span className="text-[10px] text-[#001858]">✓</span>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-accent flex items-center justify-center">
+                  <span className="text-[10px]" style={{ color: 'hsl(var(--accent-foreground))' }}>✓</span>
                 </div>
               )}
             </div>
@@ -135,11 +179,8 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
 
           {/* Description */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-semibold text-[#001858]" >Description</Label>
-             
-            </div>
-            <div className="rounded-xl overflow-hidden border-[#f3d2c1] " style={{ border: '2px solid #f3d2c1', borderRadius: '12px' }}>
+            <Label className="text-sm font-semibold" style={{ color: INK }}>Description</Label>
+            <div className="overflow-hidden" style={fieldStyle}>
               <RichTextEditor
                 value={form.description}
                 onChange={(v) => set('description', v)}
@@ -149,240 +190,41 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
             </div>
           </div>
 
-          {/* Two Column Grid */}
-          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> */}
-            {/* Owner */}
-            {/* <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#001858' }}>
-                <Users2 className="h-4 w-4" style={{ color: '#001858' }} />
-                Project Owner
-              </Label>
-              <Select value={form.ownerId} onValueChange={(v) => set('ownerId', v)}>
-                <SelectTrigger
-                  className="h-12 rounded-xl px-4 transition-all duration-200 focus:ring-0"
-                  style={{
-                    border: '2px solid #f3d2c1',
-                    background: '#ffffff',
-                    color: '#001858'
-                  }}
-                >
-                  <SelectValue>
-                    {owner ? (
-                      <div className="flex items-center gap-3">
-                        <UserAvatar name={owner.name} size="sm" />
-                        <span className="font-medium" style={{ color: '#001858' }}>{owner.name}</span>
-                      </div>
-                    ) : (
-                      <span style={{ color: '#001858' }}>Select owner</span>
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent style={{ background: '#ffffff' }}>
-                  {users.map((u: Users) => (
-                    <SelectItem
-                      key={u.id}
-                      value={u.id}
-                      className="hover:bg-[#f3d2c1] focus:bg-[#f3d2c1] transition-colors"
-                      style={{ color: '#001858' }}
-                    >
-                      <div className="flex items-center gap-3 py-1">
-                        <UserAvatar name={u.name} size="sm" />
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium" style={{ color: '#001858' }}>{u.name}</span>
-                          <span className="text-xs" style={{ color: '#001858' }}>{u.department}</span>
-                        </div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div> */}
-
-            {/* Company */}
-            {/* <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#001858' }}>
-                <Building2 className="h-4 w-4" style={{ color: '#001858' }} />
-                Company
-              </Label>
-              <Select value={form.company} onValueChange={(v) => set('company', v)}>
-                <SelectTrigger
-                  className="h-12 rounded-xl px-4 transition-all duration-200 focus:ring-0"
-                  style={{
-                    border: '2px solid #f3d2c1',
-                    background: '#ffffff',
-                    color: '#001858'
-                  }}
-                >
-                  <SelectValue placeholder="Select company" />
-                </SelectTrigger>
-                <SelectContent style={{ background: '#ffffff' }}>
-                  {COMPANIES.map((c) => (
-                    <SelectItem
-                      key={c}
-                      value={c}
-                      className="hover:bg-[#f3d2c1] focus:bg-[#f3d2c1] transition-colors"
-                      style={{ color: '#001858' }}
-                    >
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div> */}
-          {/* </div> */}
-
-          {/* Status, Tag & Timeline */}
-          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> */}
-            {/* Status */}
-            {/* <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: '#001858' }}>Status</Label>
-              <Select value={form.status} onValueChange={(v) => set('status', v)}>
-                <SelectTrigger
-                  className="h-12 rounded-xl px-4 transition-all duration-200 focus:ring-0"
-                  style={{
-                    border: '2px solid #f3d2c1',
-                    background: '#ffffff',
-                    color: '#001858'
-                  }}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent style={{ background: '#ffffff' }}>
-                  {STATUSES.map((s) => (
-                    <SelectItem
-                      key={s.value}
-                      value={s.value}
-                      className="hover:bg-[#f3d2c1] focus:bg-[#f3d2c1] transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={cn('h-2.5 w-2.5 rounded-full', s.dot)} />
-                        <span style={{ color: '#001858' }}>{s.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div> */}
-
-            {/* Tag */}
-            {/* <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#001858' }}>
-                <Tag className="h-4 w-4" style={{ color: '#001858' }} />
-                Tag
-              </Label>
-              <Input
-                value={form.tag}
-                onChange={(e) => set('tag', e.target.value)}
-                placeholder="Add a tag..."
-                className="h-12 rounded-xl px-4 transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0"
-                style={{
-                  border: '2px solid #f3d2c1',
-                  background: '#ffffff',
-                  color: '#001858'
-                }}
-              />
-              <div className="flex flex-wrap gap-2 pt-1">
-                {TAG_SUGGESTIONS.map((t) => (
-                  <button
-                    type="button"
-                    key={t}
-                    onClick={() => set('tag', t)}
-                    className={cn(
-                      'text-xs px-3 py-1.5 rounded-full transition-all duration-200 font-medium',
-                      form.tag === t ? 'shadow-sm' : 'hover:shadow-sm'
-                    )}
-                    style={{
-                      background: form.tag === t ? '#001858' : '#f3d2c1',
-                      color: form.tag === t ? '#ffffff' : '#001858',
-                    }}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div> */}
-          {/* </div> */}
-
           {/* Dates */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#001858' }}>
-                <Calendar className="h-4 w-4" style={{ color: '#001858' }} />
-                Start Date
-              </Label>
-              <Input
-                type="date"
-                value={form.startDate?.slice(0, 10) || ''}
-                onChange={(e) => set('startDate', e.target.value)}
-                className="h-12 rounded-xl px-4 transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0"
-                style={{
-                  border: '2px solid #f3d2c1',
-                  background: '#ffffff',
-                  color: '#001858'
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#001858' }}>
-                <Calendar className="h-4 w-4" style={{ color: '#001858' }} />
-                End Date
-              </Label>
-              <Input
-                type="date"
-                value={form.endDate?.slice(0, 10) || ''}
-                onChange={(e) => set('endDate', e.target.value)}
-                className="h-12 rounded-xl px-4 transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0"
-                style={{
-                  border: '2px solid #f3d2c1',
-                  background: '#ffffff',
-                  color: '#001858'
-                }}
-              />
-            </div>
+            <DateField label="Start Date" value={form.startDate} onChange={(v) => set('startDate', v)} />
+            <DateField label="End Date" value={form.endDate} onChange={(v) => set('endDate', v)} />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-8 py-5 border-t-2 flex items-center justify-between" style={{
-          borderColor: '#f3d2c1',
-          background: '#ffffff'
-        }}>
-          <div className="flex items-center gap-3">
-            {/* {owner && (
-              <span className="text-xs" style={{ color: '#001858' }}>
-                Owned by <span className="font-semibold" style={{ color: '#001858' }}>{owner.name}</span>
-              </span>
-            )} */}
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-              className="rounded-xl px-6 font-medium transition-all duration-200 hover:bg-[#f3d2c1]"
-              style={{ color: '#001858' }}
-            >
-              Cancel
-            </Button>
-            <Button
-              className={cn(
-                "rounded-xl px-8 py-2.5 font-semibold shadow-md transition-all duration-200",
-                valid && "hover:bg-primary-hover hover:scale-105 hover:shadow-lg",
-                !valid && "opacity-50 cursor-not-allowed"
-              )}
-              style={{
-                background: valid ? '#EEBBC3' : '#f3d2c1',
-                color: '#001858'
-              }}
-              onClick={() => onSave(form)}
-              disabled={!valid}
-            >
-              {editing ? 'Save Changes' : 'Create Project'}
-            </Button>
-          </div>
+        <div
+          className="px-8 py-5 border-t-2 flex items-center justify-end gap-3 bg-card"
+          style={{ borderColor: BORDER }}
+        >
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+            className="rounded-xl px-6 font-medium transition-all duration-200 hover:bg-secondary"
+            style={{ color: INK }}
+          >
+            Cancel
+          </Button>
+          <Button
+            className={cn(
+              'rounded-xl px-8 py-2.5 font-semibold shadow-md transition-all duration-200',
+              valid && !isSubmitting && 'hover:scale-105 hover:shadow-lg',
+              (!valid || isSubmitting) && 'opacity-50 cursor-not-allowed',
+            )}
+            style={{ background: valid ? 'hsl(var(--primary))' : BORDER, color: 'hsl(var(--primary-foreground))' }}
+            onClick={handleSave}
+            disabled={!valid || isSubmitting}
+          >
+            {isSubmitting ? 'Saving...' : editing ? 'Save Changes' : 'Create Project'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
-

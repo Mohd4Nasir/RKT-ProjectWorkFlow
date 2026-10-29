@@ -34,9 +34,9 @@ export function MilestonesTab({ projectId }: Props) {
   };
 
   const statusMap = {
-    completed: { label: 'Completed', icon: CheckCircle2, cls: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-    overdue:   { label: 'Overdue',   icon: Clock,        cls: 'text-red-600    bg-red-50    border-red-200'    },
-    pending:   { label: 'Pending',   icon: Circle,       cls: 'text-slate-600  bg-slate-50  border-slate-200'  },
+    completed: { label: 'Completed', icon: CheckCircle2, cls: 'text-success bg-emerald-50 border-emerald-200' },
+    overdue:   { label: 'Overdue',   icon: Clock,        cls: 'text-danger    bg-red-50    border-red-200'    },
+    pending:   { label: 'Pending',   icon: Circle,       cls: 'text-paragraph  bg-slate-50  border-slate-200'  },
   };
 
   return (
@@ -47,7 +47,7 @@ export function MilestonesTab({ projectId }: Props) {
           <h3 className="text-lg font-semibold">Milestones</h3>
           <p className="text-sm text-muted-foreground mt-0.5">Track key project checkpoints</p>
         </div>
-        <Button onClick={handleCreate} className="bg-[#E07B39] hover:bg-[#E07B39]/90 text-white" size="sm">
+        <Button onClick={handleCreate} className="bg-brand-cta hover:bg-brand-cta/90 text-white" size="sm">
           <Plus className="h-4 w-4 mr-2" /> Add Milestone
         </Button>
       </div>
@@ -86,7 +86,7 @@ export function MilestonesTab({ projectId }: Props) {
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(m.id)}>
                     <Edit className="h-3.5 w-3.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:bg-red-50" onClick={() => handleDelete(m.id)}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-danger hover:bg-red-50" onClick={() => handleDelete(m.id)}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>

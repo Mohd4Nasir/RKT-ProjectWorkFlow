@@ -22,15 +22,15 @@ interface TagChipProps {
 
 // Color variants
 const variantStyles: Record<TagVariant, string> = {
-  red: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-300',
-  orange: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/60 dark:text-orange-300',
-  yellow: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-950/60 dark:text-yellow-300',
-  green: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-950/60 dark:text-green-300',
-  blue: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300',
-  purple: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300',
-  pink: 'bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-950/60 dark:text-pink-300',
-  teal: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-950/60 dark:text-teal-300',
-  gray: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300',
+  red: 'bg-red-100 text-danger border-red-200 dark:bg-red-950/60 dark:text-danger',
+  orange: 'bg-orange-100 text-warning border-orange-200 dark:bg-orange-950/60 dark:text-warning',
+  yellow: 'bg-yellow-100 text-warning border-yellow-200 dark:bg-yellow-950/60 dark:text-warning',
+  green: 'bg-green-100 text-success border-green-200 dark:bg-green-950/60 dark:text-success',
+  blue: 'bg-blue-100 text-info border-blue-200 dark:bg-blue-950/60 dark:text-info',
+  purple: 'bg-purple-100 text-primary border-purple-200 dark:bg-purple-950/60 dark:text-primary',
+  pink: 'bg-pink-100 text-primary border-pink-200 dark:bg-pink-950/60 dark:text-primary',
+  teal: 'bg-teal-100 text-accent border-teal-200 dark:bg-teal-950/60 dark:text-accent',
+  gray: 'bg-gray-100 text-heading border-gray-200 dark:bg-gray-800 dark:text-muted-foreground',
 };
 
 const sizeStyles = {
@@ -150,17 +150,17 @@ interface ColorfulChipProps {
 }
 
 const colorStyles: Record<string, string> = {
-  red: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-300',
-  orange: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/60 dark:text-orange-300',
-  yellow: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-950/60 dark:text-yellow-300',
-  green: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-950/60 dark:text-green-300',
-  blue: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300',
-  purple: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300',
-  pink: 'bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-950/60 dark:text-pink-300',
-  indigo: 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300',
-  teal: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-950/60 dark:text-teal-300',
-  cyan: 'bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-950/60 dark:text-cyan-300',
-  gray: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300',
+  red: 'bg-red-100 text-danger border-red-200 dark:bg-red-950/60 dark:text-danger',
+  orange: 'bg-orange-100 text-warning border-orange-200 dark:bg-orange-950/60 dark:text-warning',
+  yellow: 'bg-yellow-100 text-warning border-yellow-200 dark:bg-yellow-950/60 dark:text-warning',
+  green: 'bg-green-100 text-success border-green-200 dark:bg-green-950/60 dark:text-success',
+  blue: 'bg-blue-100 text-info border-blue-200 dark:bg-blue-950/60 dark:text-info',
+  purple: 'bg-purple-100 text-primary border-purple-200 dark:bg-purple-950/60 dark:text-primary',
+  pink: 'bg-pink-100 text-primary border-pink-200 dark:bg-pink-950/60 dark:text-primary',
+  indigo: 'bg-indigo-100 text-primary border-indigo-200 dark:bg-indigo-950/60 dark:text-primary',
+  teal: 'bg-teal-100 text-accent border-teal-200 dark:bg-teal-950/60 dark:text-accent',
+  cyan: 'bg-cyan-100 text-accent border-cyan-200 dark:bg-cyan-950/60 dark:text-accent',
+  gray: 'bg-gray-100 text-heading border-gray-200 dark:bg-gray-800 dark:text-muted-foreground',
 };
 
 

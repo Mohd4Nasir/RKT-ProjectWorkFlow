@@ -4,6 +4,7 @@ import { UserAvatar } from '@/components/UserAvatar';
 import { StatusBadge as SLABadge } from '@/components/StatusBadge';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { Project } from '@/types/ProejctsType';
 
 const STATUS_COLORS: Record<string, string> = {
   active: 'bg-emerald-500', 'in-progress': 'bg-blue-500',
@@ -14,19 +15,32 @@ const STATUS_LABELS: Record<string, string> = {
   'on-hold': 'On Hold', delayed: 'Delayed', completed: 'Completed',
 };
 
-interface Props { project: any; }
+interface Props { project: Project; }
 
 export function DashboardTab({ project }: Props) {
-  const users = useAppSelector(s => s.users.items);
-  const tasks = useAppSelector(s => s.tasks.items.filter(t => t.projectId === project.id));
+  const EMPTY = [];
+  const users = useAppSelector((s: any) => s.users?.items ?? EMPTY);
+  const allTasks = useAppSelector((s: any) => s.tasks?.items ?? EMPTY);
+  const tasks = useMemo(
+    () => allTasks.filter((t: any) => String(t.projectId) === project.projectId),
+    [allTasks, project.projectId],
+  );
 
-  const owner       = users.find(u => u.id === project.ownerId);
-  const memberUsers = users.filter(u => project.members?.includes(u.id));
+  const status = String(project?.projectStatus ?? project?.projectStatus ?? '')
+    .toLowerCase().replace(/_/g, '-');
+  const description = project?.description ?? project?.description;
 
-  const done       = tasks.filter(t => t.status === 'done').length;
-  const inProgress = tasks.filter(t => t.status === 'in-progress').length;
-  const todo       = tasks.filter(t => t.status === 'todo').length;
-  const pct        = tasks.length ? Math.round((done / tasks.length) * 100) : project.progress ?? 0;
+  const owner       = users.find((u: any) => u.id === project.ownerId);
+  const memberUsers = users.filter((u: any) => project.members?.includes(u.id));
+
+  const done       = tasks.filter((t: any) => t.status === 'done').length;
+  const inProgress = tasks.filter((t: any) => t.status === 'in-progress').length;
+  const todo       = tasks.filter((t: any) => t.status === 'todo').length;
+  const pct        = tasks.length
+    ? Math.round((done / tasks.length) * 100)
+    : project.totalTask
+      ? Math.round((Number(project.completedTask ?? 0) / Number(project.totalTask)) * 100)
+      : project.progress ?? 0;
 
   return (
     <div className="space-y-6 p-4">
@@ -34,9 +48,9 @@ export function DashboardTab({ project }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Total Tasks',  val: tasks.length, color: 'text-foreground',   bg: 'bg-muted' },
-          { label: 'To Do',        val: todo,         color: 'text-slate-600',    bg: 'bg-slate-50' },
-          { label: 'In Progress',  val: inProgress,   color: 'text-blue-600',     bg: 'bg-blue-50' },
-          { label: 'Completed',    val: done,         color: 'text-emerald-600',  bg: 'bg-emerald-50' },
+          { label: 'To Do',        val: todo,         color: 'text-paragraph',    bg: 'bg-slate-50' },
+          { label: 'In Progress',  val: inProgress,   color: 'text-info',     bg: 'bg-blue-50' },
+          { label: 'Completed',    val: done,         color: 'text-success',  bg: 'bg-emerald-50' },
         ].map(s => (
           <div key={s.label} className={cn('rounded-xl p-4 border border-border', s.bg)}>
             <div className={cn('text-2xl font-bold', s.color)}>{s.val}</div>

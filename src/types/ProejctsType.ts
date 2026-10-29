@@ -14,6 +14,9 @@ export interface Users {
   joinedAt: string;
 }
 
+/** Singular alias — older modules (OwnerPicker, format, Team pages) import `User`. */
+export type User = Users;
+
 export type ProjectStatus = 'active' | 'on-hold' | 'in-progress' | 'delayed' | 'completed';
 export type Priority = 'high' | 'medium' | 'low';
 export type TaskStatus = 'todo' | 'in-progress' | 'done';

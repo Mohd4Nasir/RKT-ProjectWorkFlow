@@ -29,18 +29,18 @@ export function ProjectsToolbar({
       right={
         <>
           {showViewToggle && (
-            <div className="inline-flex rounded-md border border-border bg-card ">
+            <div className="inline-flex rounded-md border border-border bg-card text-foreground">
               <button
                 onClick={() => onViewChange?.('list')}
                 className={cn('h-8 px-3  rounded-l-md text-xs font-medium inline-flex items-center gap-1.5',
-                  view === 'list' ? 'bg-primary/60 text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
+                  view === 'list' ? 'bg-primary/60 text-heading' : 'text-muted-foreground hover:text-heading')}
               >
                 <List className="h-3.5 w-3.5" /> List
               </button>
               <button
                 onClick={() => onViewChange?.('grid')}
                 className={cn('h-8 px-3 rounded-r-md text-xs font-medium inline-flex items-center gap-1.5',
-                  view === 'grid' ? 'bg-primary/60 text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
+                  view === 'grid' ? 'bg-primary/60 text-heading' : 'text-muted-foreground hover:text-heading')}
               >
                 <LayoutGrid className="h-3.5 w-3.5" /> Grid
               </button>

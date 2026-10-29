@@ -18,7 +18,7 @@ export function TableToolbar({ query, onQueryChange, onOpenFilters, placeholder 
       <Button
         variant="outline"
         size="icon"
-        className="h-9 w-9 shrink-0"
+        className="h-9 w-9 shrink-0 text-foreground"
         onClick={onOpenFilters}
         title="Filters"
       >
@@ -33,15 +33,12 @@ export function TableToolbar({ query, onQueryChange, onOpenFilters, placeholder 
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder={placeholder}
-          className="pl-9 h-9 bg-card border-border"
+          className="pl-9 h-9 bg-card border-border text-foreground placeholder:text-muted-foreground"
         />
       </div>
 
       <div className="flex items-center gap-2 md:ml-auto">
         {right}
-        <Button variant="outline" size="icon" className="h-9 w-9">
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
       </div>
     </div>
   );

@@ -10,8 +10,16 @@ export interface CreateTaskListDto {
 }
 
 export interface UpdateTaskListDto {
+  projectId: string | number;
+  taskListId: string | number;
   listTitle?: string;
-  sequence?: number;
+}
+
+export interface UpdateTaskListPositionDto {
+  projectId: string | number;
+  taskListId: string | number;
+  referenceListId: string | number;
+  isAbove: boolean;
 }
 
 /* =========================
@@ -32,14 +40,27 @@ export interface CreateTaskDto {
 }
 
 export interface UpdateTaskDto {
+  projectId: string | number;
+  taskId: string | number;
   taskTitle?: string;
   taskDescription?: string;
   taskStartDate?: string;
   taskEndDate?: string;
-  priority?: string;
-  taskStatus?: string;
-  assigneeId?: string;
-  sequence?: number;
+  
+}
+
+export interface UpdateTaskStatusDto {
+  projectId: string | number;
+  taskId: string | number;
+  taskStatus: string;
+}
+
+export interface UpdateTaskPositionDto {
+  projectId: string | number;
+  taskId: string | number;
+  referenceTaskId: string | number;
+  isAbove: boolean;
+  taskListId?: string | number;
 }
 
 export interface CreateTaskAtPositionDto {
@@ -104,15 +125,32 @@ export const taskService = {
   },
 
   // Update List — accepts a partial DTO object, not a bare string
-  updateTaskList: async (listId: string | number, data: UpdateTaskListDto) => {
+  updateTaskList: async ( data: UpdateTaskListDto) => {
+    console.log("Update task list data:", data);
     try {
       const response = await axiosInstance.put(
-        `/task/list/update/${listId}`,
-        data,
+        `/task/list`,      data,
+
       );
       return response.data;
     } catch (error) {
       console.error("Update task list error:", error);
+      throw error;
+    }
+  },
+
+  // Move List Above / Below a reference list
+  updateTaskListPosition: async (payload: UpdateTaskListPositionDto) => {
+    try {
+      const response = await axiosInstance.put("/task/list/position", {
+        projectId: payload.projectId,
+        taskListId: payload.taskListId,
+        referenceListId: payload.referenceListId,
+        isAbove: payload.isAbove,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Update task list position error:", error);
       throw error;
     }
   },
@@ -168,21 +206,42 @@ export const taskService = {
     }
   },
   // Update Task
-  updateTask: async (taskId: string | number, data: UpdateTaskDto) => {
+  updateTask: async (data: UpdateTaskDto) => {
     try {
-      const response = await axiosInstance.put(`/task/update/${taskId}`, {
-        taskTitle: data.taskTitle,
-        description: data.taskDescription,
-        startDate: data.taskStartDate,
-        endDate: data.taskEndDate,
-        priority: data.priority,
-        status: data.taskStatus,
-        assigneeId: data.assigneeId,
-        sequence: data.sequence,
-      });
+      console.log("Update task data:", data);
+      const response = await axiosInstance.put(`/task/update`, data);
       return response.data;
     } catch (error) {
       console.error("Update task error:", error);
+      throw error;
+    }
+  },
+
+  // Update Task Status
+  updateTaskStatus: async (data: UpdateTaskStatusDto) => {
+    try {
+      const response = await axiosInstance.put(`/task/status`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Update task status error:", error);
+      throw error;
+    }
+  },
+
+  // Move Task Above / Below a reference task
+  updateTaskPosition: async (payload: UpdateTaskPositionDto) => {
+    try {
+      console.log("Update task position payload:", payload);
+      const response = await axiosInstance.put(`/task/move`, {
+        projectId: payload.projectId,
+        taskId: payload.taskId,
+        referenceTaskId: payload.referenceTaskId,
+        isAbove: payload.isAbove,
+        taskListId: payload.taskListId,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Update task position error:", error);
       throw error;
     }
   },
@@ -194,6 +253,18 @@ export const taskService = {
       return response.data;
     } catch (error) {
       console.error("Delete task error:", error);
+      throw error;
+    }
+  },
+
+  // Statuses selectable on a task — GET /task/statuses
+  getTaskStatuses: async () => {
+    try {
+      const res = await axiosInstance.get(`/task/statuses`);
+      console.log("taskService getTaskStatuses", res.data);
+      return res.data;
+    } catch (error) {
+      console.error("Get task statuses error:", error);
       throw error;
     }
   },

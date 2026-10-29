@@ -56,10 +56,15 @@ export function TasksTab({ projectId }: TasksTabProps) {
 
     // ✅ Ek hi source of truth — pura tree, AS-IS (no sort/filter here)
     const lists = useAppSelector(state => state.tasks.lists || []);
-    console.log('TaskTab lists from Redux:', lists);
+    // console.log('TaskTab lists from Redux:', lists);
     const users = useAppSelector(state => state.users?.items || []);
-    const project = useAppSelector(state => state.projects?.items?.find(p => p.id === projectId) || null);
-
+const project = useAppSelector(state =>
+  state.projects?.items?.find(
+    p => String(p.projectId ?? p.id) === String(projectId)
+  ) || null
+);
+const [fetchedProject, setFetchedProject] = useState(null);
+const projectForPanel = project ?? fetchedProject;
     // Sirf card-view/search/insertOptions ke liye flatten — table render iska use nahi karta
     const allTasksFlat = useMemo(() => flattenTree(lists), [lists]);
 
@@ -123,6 +128,8 @@ export function TasksTab({ projectId }: TasksTabProps) {
 
             const response = await projectApiService.getProjectById(projectId);
             console.log('Fetched project ke all task:', response.data.lists);
+            setFetchedProject(response.data);
+
             // 🔥 As-is dispatch — no transformation, no sort
             dispatch(setProjectData({
                 projectId: String(response.data.projectId),
@@ -173,7 +180,7 @@ export function TasksTab({ projectId }: TasksTabProps) {
     };
 
     const openSimpleAddTask = (taskListId?: string, parentTaskId?: string | null) => {
-        const defaultListId = taskListId || String(sortedLists[0]?.listId || '');
+        const defaultListId = taskListId || String(lists[0]?.listId || '');
         setEditingTask(null);
         setTaskParentId(parentTaskId || null);
         setTaskListIdForModal(defaultListId);
@@ -221,29 +228,32 @@ export function TasksTab({ projectId }: TasksTabProps) {
     const saveTask = async (): Promise<void> => {
         if (!taskForm.taskName.trim()) { toast.error('Enter a task name'); return; }
 
-        if (editingTask) {
-            try {
-                await taskService.updateTask(String(editingTask.taskId), {
-                    taskTitle: taskForm.taskName.trim(),
-                    taskDescription: taskForm.taskDescription,
-                    taskStartDate: taskForm.taskStartDate,
-                    taskEndDate: taskForm.taskEndDate,
-                });
-                dispatch(updateTask({
-                    taskId: editingTask.taskId,
-                    taskTitle: taskForm.taskName.trim(),
-                    taskDescription: taskForm.taskDescription,
-                    startDate: taskForm.taskStartDate,
-                    endDate: taskForm.taskEndDate,
-                }));
-                toast.success('Task updated successfully');
-                setIsTaskModalOpen(false);
-                return;
-            } catch {
-                toast.error('Failed to update task');
-                return;
-            }
-        }
+       if (editingTask) {
+    try {
+        // saveTask (editing branch)
+await taskService.updateTask({
+    projectId: Number(projectId),
+    taskId: Number(editingTask.taskId),
+    taskTitle: taskForm.taskName.trim(),
+    taskDescription: taskForm.taskDescription,
+    taskStartDate: taskForm.taskStartDate || null,
+    taskEndDate: taskForm.taskEndDate || null,
+});
+        dispatch(updateTask({
+            taskId: editingTask.taskId,
+            taskTitle: taskForm.taskName.trim(),
+            taskDescription: taskForm.taskDescription,
+            startDate: taskForm.taskStartDate,
+            endDate: taskForm.taskEndDate,
+        }));
+        toast.success('Task updated successfully');
+        setIsTaskModalOpen(false);
+        return;
+    } catch {
+        toast.error('Failed to update task');
+        return;
+    }
+}
 
         if (taskModalMode === 'position' && positionData.referenceTaskId) {
             const loadingToast = toast.loading('Creating task...');
@@ -295,9 +305,10 @@ export function TasksTab({ projectId }: TasksTabProps) {
 
         try {
             if (editingList) {
-                await taskService.updateTaskList(String(editingList.listId), {
-                    listTitle: listName.trim(),
-                    sequence: editingList.sequence || 0,
+                await taskService.updateTaskList( {
+                    projectId: projectId,
+                    taskListId: editingList.listId,                  
+                      listTitle: listName.trim(),
                 });
                 dispatch(updateTaskList({ ...editingList, listTitle: listName.trim() }));
                 toast.dismiss(loadingToast);
@@ -386,9 +397,10 @@ export function TasksTab({ projectId }: TasksTabProps) {
 
     const handleUpdateTaskList = async (taskList: ReduxTaskList): Promise<void> => {
         try {
-            await taskService.updateTaskList(String(taskList.listId), {
+            await taskService.updateTaskList( {
+                projectId: projectId,
+                taskListId: taskList.listId,
                 listTitle: taskList.listTitle,
-                sequence: taskList.sequence || 0,
             });
             dispatch(updateTaskList(taskList));
             toast.success('List updated');
@@ -432,14 +444,15 @@ export function TasksTab({ projectId }: TasksTabProps) {
 
     const handleUpdateTask = async (task: ReduxTask): Promise<void> => {
         try {
-            await taskService.updateTask(String(task.taskId), {
-                taskTitle: task.taskTitle,
-                taskStatus: task.taskStatus,
-                taskDescription: task.taskDescription || '',
-                taskStartDate: task.startDate || '',
-                taskEndDate: task.endDate || '',
-                priority: task.priority,
-            });
+           // handleUpdateTask
+await taskService.updateTask({
+    projectId: Number(projectId),
+    taskId: Number(task.taskId),
+    taskTitle: task.taskTitle,
+    taskDescription: task.taskDescription || '',
+    taskStartDate: task.startDate?.slice(0, 10) || null,
+    taskEndDate: task.endDate?.slice(0, 10) || null,
+});
             dispatch(updateTask(task));
             toast.success('Task updated');
         } catch {
@@ -459,15 +472,19 @@ export function TasksTab({ projectId }: TasksTabProps) {
         }
     };
 
-    const handleReorderTaskLists = async (orderedIds: string[]): Promise<void> => {
+    const handleReorderTaskLists = async (move: { taskListId: string; referenceListId: string; isAbove: boolean }): Promise<void> => {
         try {
-            for (const [index, id] of orderedIds.entries()) {
-                await taskService.updateTaskList(id, { sequence: index });
-            }
-            dispatch(reorderTaskLists({ projectId, orderedIds }));
+            await taskService.updateTaskListPosition({
+                projectId,
+                taskListId: move.taskListId,
+                referenceListId: move.referenceListId,
+                isAbove: move.isAbove,
+            });
+            await fetchProjectWithTasks();
             toast.success('Lists reordered');
-        } catch {
-            toast.error('Failed to reorder lists');
+        } catch (error: any) {
+            const errorMessage = error?.response?.data?.message || error?.message || 'Failed to reorder lists';
+            toast.error(`❌ ${errorMessage}`);
             throw new Error();
         }
     };
@@ -477,7 +494,11 @@ export function TasksTab({ projectId }: TasksTabProps) {
     ): Promise<void> => {
         try {
             for (const [index, id] of orderedIds.entries()) {
-                await taskService.updateTask(id, { sequence: index });
+                await taskService.updateTask({
+                    projectId,
+                    taskId: id,
+                            // sequence: index,
+                });
             }
             dispatch(reorderTasks({ taskListId: listId, parentTaskId, orderedIds }));
             toast.success('Tasks reordered');
@@ -668,11 +689,11 @@ export function TasksTab({ projectId }: TasksTabProps) {
                 referenceTaskId={positionData.referenceTaskId}
             />
 
-            {selectedTask && project && (
+            {selectedTask && projectForPanel && (
                 <TaskDetailPanel
                     task={selectedTask}
                     users={users}
-                    project={project}
+                    project={projectForPanel}
                     onClose={() => setSelectedTask(null)}
                     onSelectTask={(taskId) => {
                         openTaskDetailById(taskId);

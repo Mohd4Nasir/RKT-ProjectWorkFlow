@@ -22,7 +22,7 @@ export function DatePickerCell({ value, onChange, placeholder = 'Pick date', cla
         <button
           type="button"
           className={cn(
-            'inline-flex items-center gap-2 h-8 px-2 rounded-md text-xs hover:bg-muted/50 w-full text-left',
+            'inline-flex items-center gap-2 h-8 px-2 rounded-md text-xs hover:bg-muted/50 w-full text-left text-foreground',
             !date && 'text-muted-foreground',
             className,
           )}

@@ -1,28 +1,28 @@
-import { useEffect, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '@/store';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useAppDispatch } from '@/store';
+import { patchProject } from '@/store/slices/projectsSlice';
 import { projectApiService } from '@/services/projectsApiService';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
-import {
-  BarChart3, CheckSquare, FileText, Flag,
-  AlertCircle, Users, ArrowUpRight, MoreHorizontal,
-} from 'lucide-react';
+import { BarChart3, CheckSquare, FileText, Flag, AlertCircle, Users } from 'lucide-react';
 
 import { ReportsTab } from '../AllTabs/ReportsTab';
 import { DocumentsTab } from '../AllTabs/DocumentsTab';
 import { MilestonesTab } from '../AllTabs/MilestonesTab';
 import { IssuesTab } from '../AllTabs/IssuesTab';
-import { UsersTab } from '../AllTabs/UserTab';
+import { TeamTab,  } from '../AllTabs/TeamTab';
 import { DashboardTab } from '../AllTabs/DashboardTab';
 import { TasksTab } from '../AllTabs/TaskTab';
-import { getProjectFromStorage, saveProjectToStorage } from '@/utils/projectStorage';
-import { Project } from '@/types/ProejctsType';
 import ActivityTab from '../AllTabs/ActivityTab';
-
+import { Project } from '@/types/ProejctsType';
+import { getApiErrorMessage, isUnauthorizedApiError } from '@/utils/apiError';
+import {
+  HeaderChanges, mapStatusOptions, ProjectDetailsHeader, StatusOption,
+}  from './ProjectDetailsHeader';
+import {getProjectFromStorage} from '@/utils/projectStorage';
 type Tab = 'dashboard' | 'tasks' | 'reports' | 'documents' | 'milestones' | 'issues' | 'users' | 'activity';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
@@ -36,99 +36,95 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'activity', label: 'Activity', icon: <AlertCircle className="h-3.5 w-3.5" /> },
 ];
 
-const mapStatus = (s: string): 'todo' | 'in-progress' | 'done' => {
-  switch (s?.toUpperCase()) {
-    case 'IN_PROGRESS': return 'in-progress';
-    case 'DONE': return 'done';
-    default: return 'todo';
-  }
-};
-
-
-
-
-
-
 export default function ProjectDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const location = useLocation();
+ 
   const [tab, setTab] = useState<Tab>('tasks');
-  const [project, setProject] = useState(null);
+  const [details, setDetails] = useState<Project | null>(null); // getProjectDetailsHeader response, as-is
   const [loading, setLoading] = useState(true);
-  
-  // Redux se projects list lo
-  const allProjects = useAppSelector(state => state.projects?.items || []);
-  // const projectsLoading = useAppSelector(state => state.projects || false);
-  
-  console.log('🔍 ProjectDetails: ID from URL:', id);
-  // console.log('🔍 Location state:', location.state);
-  
-  // ==========================================
-  // ✅ MAIN LOGIC: Load project from multiple sources
-  // ==========================================
+  const [statusOptions, setStatusOptions] = useState<StatusOption[]>([]);
+ console.log('ProjectDetails: getProjectFromStorage(id):', getProjectFromStorage(id)); // Debugging line
+  // status dropdown options
   useEffect(() => {
-    const loadProject = async () => {
-      // console.log('📡 Loading project...');
-      
-      // 1️⃣ Try: Location state se
-      let foundProject = location.state?.project;
-      // console.log('1️⃣ From location.state:', foundProject ? '✅ Found' : '❌ Not found');
-      
-      // 2️⃣ Try: SessionStorage se (refresh case)
-      if (!foundProject) {
-        foundProject = getProjectFromStorage(id);
-        // console.log('2️⃣ From sessionStorage:', foundProject ? '✅ Found' : '❌ Not found');
-      }
-      
-      // 3️⃣ Try: Redux list se
-      if (!foundProject && allProjects.length > 0) {
-        foundProject = allProjects.find((p: Project) => 
-          String(p.id || p.projectId) === String(id)
-        );
-        console.log('3️⃣ From Redux:', foundProject ? '✅ Found' : '❌ Not found');
-      }
-      
-      // 4️⃣ Try: Agar Redux list empty hai toh fetch karo
-      if (!foundProject && allProjects.length === 0) {
-        console.log('📡 Fetching projects from API...');
-        try {
-          // ✅ Tumhari project API call
-          const projects = await projectApiService.getProjects();
-          
-          // Redux mein store karo
-          // dispatch(setProjects(projects)); // Agar tumhara slice hai
-          
-          // Ab isme se dhundho
-          foundProject = projects.find((p: Project) => 
-            String(p.id || p.projectId) === String(id)
-          );
-          console.log('4️⃣ After API fetch:', foundProject ? '✅ Found' : '❌ Not found');
-        } catch (error) {
-          console.error('❌ Failed to fetch projects:', error);
+    let cancelled = false;
+    projectApiService
+      .getProjectStatuses()
+      .then((data: { data: StatusOption[] }) => {
+        if (!cancelled) setStatusOptions(mapStatusOptions(data.data));
+      })
+      .catch((error: unknown) => console.error('Failed to load statuses:', error));
+    return () => { cancelled = true; };
+  }, []);
+
+  // Only the URL id is used.
+  const loadDetails = useCallback(
+    async (showLoader = true) => {
+      if (!id) return;
+      if (showLoader) setLoading(true);
+      try {
+        const res = await projectApiService.getProjectDetailsHeader(id);
+        setDetails(res.data);
+      } catch (error) {
+        console.error('Failed to load project details:', error);
+        if (!isUnauthorizedApiError(error)) {
+          toast.error(getApiErrorMessage(error, 'Failed to load project details'));
         }
+      } finally {
+        setLoading(false);
       }
-      
-      // ✅ Agar project mil gaya toh storage mein save karo
-      if (foundProject) {
-        console.log('✅ Project loaded successfully:', foundProject);
-        saveProjectToStorage(foundProject);
-        setProject(foundProject);
+    },
+    [id],
+  );
+
+  useEffect(() => {
+    setDetails(null); // no old project flash when id changes
+    loadDetails(true);
+  }, [loadDetails]);
+
+  const handleUpdate = async (changes: HeaderChanges) => {
+    if (!details) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d = details as any;
+    const projectId = d.projectId ?? id;
+
+    try {
+      let patch: Partial<Project>;
+
+      if (changes.status) {
+        await projectApiService.updateProjectStatus({ projectId, projectStatus: changes.status });
+        patch = { projectStatus: changes.status } as Partial<Project>;
+        toast.success('Project status updated');
       } else {
-        console.error('❌ Project not found anywhere!');
-        toast.error('Project not found');
+        const projectTitle = changes.title ?? d.projectTitle;
+        const projectDescription = changes.description ?? d.projectDescription ?? '';
+        const startDate = changes.startDate ?? d.startDate?.slice(0, 10);
+        const endDate = changes.endDate ?? d.endDate?.slice(0, 10);
+
+        await projectApiService.updateProject({
+          projectId,
+          projectTitle,
+          projectDescription,
+          startDate,
+          endDate,
+        });
+        patch = { projectTitle, projectDescription, startDate, endDate } as Partial<Project>;
+        toast.success('Project updated');
       }
-      
-      setLoading(false);
-    };
-    
-    loadProject();
-  }, [id, location.state, allProjects, ]);
-  
-  // ==========================================
-  // ✅ Loading State
-  // ==========================================
+
+      setDetails((prev) => (prev ? { ...prev, ...patch } : prev)); // UI turant update
+      dispatch(patchProject({ projectId, ...patch }));             // Redux turant update
+      loadDetails(false);                                          // background re-sync
+    } catch (error) {
+      console.error('Update project error:', error);
+      if (!isUnauthorizedApiError(error)) {
+        toast.error(getApiErrorMessage(error, 'Failed to update project'));
+      }
+      throw error; // header edit mode open rahega
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -139,11 +135,8 @@ export default function ProjectDetails() {
       </div>
     );
   }
-  
-  // ==========================================
-  // ✅ Not Found State
-  // ==========================================
-  if (!project) {
+
+  if (!details) {
     return (
       <div className="card-elevated p-12 text-center">
         <div className="max-w-md mx-auto">
@@ -152,71 +145,35 @@ export default function ProjectDetails() {
           <p className="text-sm text-muted-foreground mt-2">
             The project you're looking for doesn't exist or has been deleted.
           </p>
-          <Button 
-            variant="outline" 
-            className="mt-4" 
-            onClick={() => navigate('/projects')}
-          >
+          <Button variant="outline" className="mt-4" onClick={() => navigate('/projects')}>
             Back to Projects
           </Button>
         </div>
       </div>
     );
   }
-  
-  // ==========================================
-  // ✅ Project mil gaya - Render
-  // ==========================================
-  // Project ID normalize karo (kyuki project.id ya project.projectId ho sakta hai)
-  const projectId = project.id || project.projectId;
-  
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const projectId = ((details as any).projectId ?? id) as string;
+
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-5 bg-secondary-55 py-3 border-b border-border  rounded-t-2xl">
-        <span
-          className="h-7 w-7 rounded-lg grid place-items-center text-white bg-accent  text-xs font-bold flex-shrink-0"
-        >
-          {(project.name || project.projectTitle || 'P')
-            .split(' ')
-            .map((w: string) => w[0])
-            .slice(0, 2)
-            .join('')
-            .toUpperCase()}
-        </span>
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-mono text-muted-foreground font-semibold">
-            {project.code || `PRJ-${String(projectId).padStart(3, '0')}`}
-          </span>
-          <h2 className="font-bold text-base truncate">
-            {project.name || project.projectTitle || 'Untitled Project'}
-          </h2>
-        </div>
-        <div className="flex items-center gap-1.5 ml-auto flex-shrink-0">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-xs font-semibold" 
-            onClick={() => navigate('/projects')}
-          >
-            Back to Projects <ArrowUpRight className="h-3.5 w-3.5 ml-1" />
-          </Button>
-          <button className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground">
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+      <ProjectDetailsHeader
+        project={details}
+        statusOptions={statusOptions}
+        onBack={() => navigate('/projects')}
+        onUpdate={handleUpdate}
+      />
 
-      {/* Tabs */}
       <div className="flex items-center gap-0 px-4 border-b border-border bg-card overflow-x-auto">
-        {TABS.map(t => (
+        {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={cn(
               'flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors',
               tab === t.id
-                ? 'border-[#d9376e] text-[#d9376e]'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground',
             )}
           >
@@ -225,15 +182,14 @@ export default function ProjectDetails() {
         ))}
       </div>
 
-      {/* Tab content — each tab is fully self-contained */}
       <div className="min-h-[calc(100vh-160px)]">
-        {tab === 'dashboard' && <DashboardTab project={project} />}
+        {tab === 'dashboard' && <DashboardTab project={details} />}
         {tab === 'tasks' && <TasksTab projectId={projectId} />}
         {tab === 'reports' && <ReportsTab projectId={projectId} />}
         {tab === 'documents' && <DocumentsTab projectId={projectId} />}
         {tab === 'milestones' && <MilestonesTab projectId={projectId} />}
         {tab === 'issues' && <IssuesTab projectId={projectId} />}
-        {tab === 'users' && <UsersTab project={project} />}
+        {tab === 'users' && <TeamTab project={details} />}
         {tab === 'activity' && <ActivityTab projectId={projectId} />}
       </div>
     </div>
