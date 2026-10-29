@@ -7,22 +7,29 @@ interface Props {
   query: string;
   onQueryChange: (v: string) => void;
   onOpenFilters: () => void;
+  /** number of filters currently applied, shown as a badge on the filter button */
+  activeFilters?: number;
   placeholder?: string;
   left?: ReactNode;
   right?: ReactNode;
 }
 
-export function TableToolbar({ query, onQueryChange, onOpenFilters, placeholder = 'Search…', left, right }: Props) {
+export function TableToolbar({ query, onQueryChange, onOpenFilters, activeFilters = 0, placeholder = 'Search…', left, right }: Props) {
   return (
     <div className="flex flex-col md:flex-row md:items-center gap-3">
       <Button
         variant="outline"
         size="icon"
-        className="h-9 w-9 shrink-0"
+        className="h-9 w-9 shrink-0 relative"
         onClick={onOpenFilters}
-        title="Filters"
+        title={activeFilters ? `Filters (${activeFilters} applied)` : 'Filters'}
       >
         <Filter className="h-4 w-4" />
+        {activeFilters > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+            {activeFilters}
+          </span>
+        )}
       </Button>
 
       {left}
@@ -37,7 +44,7 @@ export function TableToolbar({ query, onQueryChange, onOpenFilters, placeholder 
         />
       </div>
 
-      <div className="flex items-center gap-2 md:ml-auto">
+      <div className="flex flex-wrap items-center gap-2 md:ml-auto">
         {right}
         <Button variant="outline" size="icon" className="h-9 w-9">
           <MoreHorizontal className="h-4 w-4" />

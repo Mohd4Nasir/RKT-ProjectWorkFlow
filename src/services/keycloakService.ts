@@ -21,7 +21,7 @@ import keycloak from "@/lib/keycloak";
  * and proactively refresh it.  Setting this to 30 s gives a comfortable
  * buffer for slow networks.
  */
-export const TOKEN_REFRESH_MIN_VALIDITY = 600; // seconds
+export const TOKEN_REFRESH_MIN_VALIDITY = 30; // seconds
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -128,23 +128,25 @@ export function getRealmRoles(): string[] {
  *  1. The Axios request interceptor (before every API call).
  *  2. The background interval in KeycloakProvider (every 60 s).
  */
-export async function ensureFreshToken(): Promise<boolean> {
+let refreshInflight: Promise<boolean> | null = null;
+
+export function ensureFreshToken(): Promise<boolean> {
   if (!keycloak.authenticated) {
     console.warn("[Keycloak] User not authenticated");
-    return false;
+    return Promise.resolve(false);
   }
-  try {
-    const refreshed = await keycloak.updateToken(TOKEN_REFRESH_MIN_VALIDITY);
-    if (refreshed) {
-      // console.log("[Keycloak] Token refreshed");
-    } else {
-      console.log("[Keycloak] Token still valid");
-    }
-    return true;
-  } catch (error) {
-    console.error("[Keycloak] Token refresh failed", error);
-    return false;
-  }
+  // parallel requests share one updateToken() call instead of each hitting Keycloak
+  refreshInflight ??= keycloak
+    .updateToken(TOKEN_REFRESH_MIN_VALIDITY)
+    .then(() => true)
+    .catch((error) => {
+      console.error("[Keycloak] Token refresh failed", error);
+      return false;
+    })
+    .finally(() => {
+      refreshInflight = null;
+    });
+  return refreshInflight;
 }
 
 // ─── Logout ──────────────────────────────────────────────────────────────────

@@ -27,7 +27,7 @@ export default function Users() {
   }), [users, q, role]);
 
   const projectsForUser = (uid: string) => 
-    projects.filter((p) => p.members.includes(uid)).length;
+    projects.filter((p) => p.members?.includes(uid)).length;
 
   return (
     <div className="space-y-6">
@@ -61,11 +61,11 @@ export default function Users() {
       </div>
 
       {/* Users Table */}
-      <div className="card-elevated overflow-hidden">
+      <div className="card-elevated rounded-none overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40">
-              <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+            <thead className="bg-sidebar">
+              <tr className="text-left text-[11px] uppercase tracking-wider text-white/75">
                 <th className="px-4 py-3 font-semibold">Member</th>
                 <th className="px-4 py-3 font-semibold">Department</th>
                 <th className="px-4 py-3 font-semibold">Role</th>
@@ -84,7 +84,7 @@ export default function Users() {
                 </tr>
               ) : (
                 filtered.map((u) => (
-                  <tr key={u.id} className="border-t border-border hover:bg-muted/20">
+                  <tr key={u.id} className="border-t border-border hover:bg-primary/[0.04]">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <UserAvatar name={u.name} />
@@ -101,7 +101,7 @@ export default function Users() {
                       {u.department || '-'}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize bg-primary-soft text-primary-hover">
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize bg-primary/10 text-primary">
                         {u.role}
                       </span>
                     </td>

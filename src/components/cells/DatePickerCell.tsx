@@ -22,12 +22,12 @@ export function DatePickerCell({ value, onChange, placeholder = 'Pick date', cla
         <button
           type="button"
           className={cn(
-            'inline-flex items-center gap-2 h-8 px-2 rounded-md text-xs hover:bg-muted/50 w-full text-left',
+            'inline-flex items-center gap-2 whitespace-nowrap h-8 px-2 rounded-md text-xs hover:bg-muted/50 w-full text-left',
             !date && 'text-muted-foreground',
             className,
           )}
         >
-          <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+          <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           {date ? format(date, 'dd MMM yyyy') : placeholder}
         </button>
       </PopoverTrigger>

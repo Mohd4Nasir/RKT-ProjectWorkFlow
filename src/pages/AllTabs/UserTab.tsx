@@ -54,7 +54,7 @@ export function UsersTab({ project }: { project: Project }) {
 
   const getRoleBadge = (userId: string) =>
     userId === project.ownerId
-      ? { label: 'Owner', icon: Crown, className: 'bg-amber-100 text-amber-700 border-amber-200' }
+      ? { label: 'Owner', icon: Crown, className: 'bg-violet-100 text-violet-800 border-violet-300' }
       : { label: 'Member', icon: Star, className: 'bg-blue-100  text-blue-700  border-blue-200' };
 
 
@@ -131,18 +131,20 @@ export function UsersTab({ project }: { project: Project }) {
   const confirmRemoveMember = async () => {
     if (!userToRemove) return;
     try {
-      // TODO: await projectApiService.removeProjectMember({ projectId: project.id, userId: userToRemove.id });
+      await projectApiService.removeMember(project.id, userToRemove.userId ?? userToRemove.id);
       dispatch(removeProjectMember({ projectId: project.id, userId: userToRemove.id }));
+      fetchExistingMembersInProject();
+      fetchMembers();
       toast.success(`${userToRemove.name} removed`);
       setDeleteConfirmOpen(false);
       setUserToRemove(null);
     } catch { toast.error('Failed to remove member'); }
   };
 
-  const handleChangeRole = async (userId: string, role: 'member' | 'contributor' | 'viewer') => {
+  const handleChangeRole = async (userId: string, role: string) => {
     try {
-      // TODO: await projectApiService.updateProjectMemberRole({ projectId: project.id, userId, role });
-      dispatch(updateProjectMemberRole({ projectId: project.id, userId, role }));
+      await projectApiService.updateMemberRole(project.id, userId, role);
+      fetchExistingMembersInProject();
       toast.success('Role updated');
     } catch { toast.error('Failed to update role'); }
   };
@@ -166,7 +168,7 @@ export function UsersTab({ project }: { project: Project }) {
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline"
-            onClick={() => setAddMemberOpen(true)} className="bg-primary  text-[#232946]" size="sm">
+            onClick={() => setAddMemberOpen(true)} className="bg-primary text-primary-foreground hover:bg-primary-hover border-transparent hover:text-primary-foreground" size="sm">
             <UserPlus className="h-4 w-4 mr-2" /> Add Member
           </Button>
           {viewMode === 'table' && memberUsers.length > 0 && (

@@ -1,9 +1,8 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Notification } from '@/types/ProejctsType';
-import { mockNotifications } from '@/services/mockData';
 
 interface NotifState { items: Notification[]; }
-const initialState: NotifState = { items: mockNotifications };
+const initialState: NotifState = { items: [] };
 
 const slice = createSlice({
   name: 'notifications',

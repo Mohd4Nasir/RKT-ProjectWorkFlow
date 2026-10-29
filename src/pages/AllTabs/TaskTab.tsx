@@ -1,23 +1,28 @@
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { projectApiService } from '@/services/projectsApiService';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import { Search, X, Filter, LayoutList, LayoutGrid, FolderPlus, CheckSquare } from 'lucide-react';
+import { Search, X, Filter, LayoutList, LayoutGrid, FolderPlus, CheckSquare, Columns3 } from 'lucide-react';
+import { TaskBoard, BoardTask } from '@/components/board/TaskBoard';
 
-import { TaskListFormModal } from '@/pages/Task/TaskListFormModal';
-import { TaskDetailPanel } from '@/pages/Task/TaskDetailsPanel';
-import { TaskFormModal } from '@/pages/Task/TaskFormModal';
+import { TaskListFormModal } from '@/pages/task/TaskListFormModal';
+import { TaskDetailPanel } from '@/pages/task/TaskDetailsPanel';
+import { TaskFormModal } from '@/pages/task/TaskFormModal';
 
 import { mapStatusFromApi, ViewMode } from '@/utils/tasksTabUtils';
+import { ProjectsFilterDrawer } from '@/pages/projects/ProjectsFilterDrawer';
+import { useFilterState } from '@/pages/projects/hooks/useProjectsFilter';
+import { useTaskStatuses } from '@/pages/task/useTaskStatuses';
+import { useTaskPriorities } from '@/pages/task/useTaskPriorities';
+import { priorityOf } from '@/pages/task/taskUi';
+import { buildTaskFilterFields, countActiveFilters, filterFlat, filterLists } from '@/pages/task/taskFilters';
 import { taskService } from '@/services/taskservice';
-import { TaskTabTable } from '@/pages/Task/TaskTabtable';
-import { TaskCard } from '@/pages/Task/TaskCard';
+import { TaskTabTable } from '@/pages/task/TaskTabtable';
+import { TaskCard } from '@/pages/task/TaskCard';
 import {
     setLoading,
     setProjectData,
@@ -33,6 +38,8 @@ import { cn } from '@/lib/utils';
 
 interface TasksTabProps {
     projectId: string;
+    /** the project ProjectDetails already loaded — Redux `projects` is empty after a reload */
+    project?: any;
 }
 
 type ReduxTask = TaskNode;
@@ -51,23 +58,60 @@ function flattenTree(lists: TaskListNode[]): (SubTaskNode & { listId: number })[
     return out;
 }
 
-export function TasksTab({ projectId }: TasksTabProps) {
+export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
     const dispatch = useAppDispatch();
 
     // ✅ Ek hi source of truth — pura tree, AS-IS (no sort/filter here)
     const lists = useAppSelector(state => state.tasks.lists || []);
     console.log('TaskTab lists from Redux:', lists);
     const users = useAppSelector(state => state.users?.items || []);
-    const project = useAppSelector(state => state.projects?.items?.find(p => p.id === projectId) || null);
+    const reduxProject = useAppSelector(state => state.projects?.items?.find(p => p.id === projectId) || null);
+    // Redux is only persisted for `ui`, so after a reload `projects.items` is empty and the panel
+    // (which needs a project) never rendered. Fall back to the project the page already has.
+    const project = reduxProject ?? (projectProp ? { ...projectProp, projectId: projectProp.projectId ?? projectProp.id, projectTitle: projectProp.projectTitle ?? projectProp.name } : null);
 
     // Sirf card-view/search/insertOptions ke liye flatten — table render iska use nahi karta
     const allTasksFlat = useMemo(() => flattenTree(lists), [lists]);
 
+
     const [viewMode, setViewMode] = useState<ViewMode>('table');
-    const [filter, setFilter] = useState<string>('all');
     const [search, setSearch] = useState<string>('');
+    const [filterOpen, setFilterOpen] = useState(false);
+    const filters = useFilterState();
+    const statusOptions = useTaskStatuses();
+    const priorityOptions = useTaskPriorities();
     const [selectedTask, setSelectedTask] = useState<ReduxTask | null>(null);
+    // the open panel lives in the URL (?task=ID) so a reload brings it back
+    const [searchParams, setSearchParams] = useSearchParams();
+    const setTaskParam = (id: string | number | null) =>
+        setSearchParams(prev => {
+            const n = new URLSearchParams(prev);
+            if (id == null) n.delete('task'); else n.set('task', String(id));
+            return n;
+        }, { replace: true });
     const [isLoading, setIsLoading] = useState<boolean>(false);
+
+    // Kanban board data: every task + subtask, searchable
+    const boardTasks: BoardTask[] = useMemo(() => {
+        return filterFlat(allTasksFlat, search, filters.values)
+            .map(t => {
+                const kids = t.subTask || [];
+                return {
+                    key: String(t.taskId),
+                    taskId: t.taskId,
+                    projectId,
+                    title: t.taskTitle,
+                    status: t.taskStatus,
+                    priority: priorityOf(t),
+                    endDate: t.endDate,
+                    listTitle: lists.find(l => l.listId === t.listId)?.listTitle,
+                    subtaskTotal: kids.length,
+                    subtaskDone: kids.filter(k => ['COMPLETED', 'CLOSED', 'DONE'].includes((k.taskStatus || '').toUpperCase())).length,
+                    isSubtask: !!t.parentTaskId,
+                };
+            });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [allTasksFlat, lists, search, filters.values]);
 
     const [isTaskModalOpen, setIsTaskModalOpen] = useState<boolean>(false);
     const [editingTask, setEditingTask] = useState<ReduxTask | null>(null);
@@ -173,7 +217,7 @@ export function TasksTab({ projectId }: TasksTabProps) {
     };
 
     const openSimpleAddTask = (taskListId?: string, parentTaskId?: string | null) => {
-        const defaultListId = taskListId || String(sortedLists[0]?.listId || '');
+        const defaultListId = taskListId || String(lists[0]?.listId || '');
         setEditingTask(null);
         setTaskParentId(parentTaskId || null);
         setTaskListIdForModal(defaultListId);
@@ -223,7 +267,7 @@ export function TasksTab({ projectId }: TasksTabProps) {
 
         if (editingTask) {
             try {
-                await taskService.updateTask(String(editingTask.taskId), {
+                await taskService.updateTask(projectId, editingTask.taskId, {
                     taskTitle: taskForm.taskName.trim(),
                     taskDescription: taskForm.taskDescription,
                     taskStartDate: taskForm.taskStartDate,
@@ -295,10 +339,7 @@ export function TasksTab({ projectId }: TasksTabProps) {
 
         try {
             if (editingList) {
-                await taskService.updateTaskList(String(editingList.listId), {
-                    listTitle: listName.trim(),
-                    sequence: editingList.sequence || 0,
-                });
+                await taskService.updateTaskList(projectId, editingList.listId, listName.trim());
                 dispatch(updateTaskList({ ...editingList, listTitle: listName.trim() }));
                 toast.dismiss(loadingToast);
                 toast.success('List updated successfully');
@@ -349,16 +390,19 @@ export function TasksTab({ projectId }: TasksTabProps) {
 
     // ✅ Sirf card-view ke liye filter — table tree isse untouched hai
     const filteredTasksForCards = useMemo(() => {
-        let result = allTasksFlat;
-        if (filter !== 'all') result = result.filter(t => mapStatusFromApi(t.taskStatus) === filter);
-        if (search) {
-            result = result.filter(t =>
-                t.taskTitle?.toLowerCase().includes(search.toLowerCase()) ||
-                t.taskDescription?.toLowerCase().includes(search.toLowerCase())
-            );
-        }
-        return result;
-    }, [allTasksFlat, filter, search]);
+        return filterFlat(allTasksFlat, search, filters.values);
+    }, [allTasksFlat, search, filters.values]);
+
+    // all views read from redux; filters only narrow what is shown (no API calls)
+    const filterFields = useMemo(() => buildTaskFilterFields({
+        statuses: statusOptions,
+        priorities: priorityOptions,
+        users: users.map(u => ({ id: u.id, name: u.name })),
+        lists: lists.map(l => ({ listId: l.listId, listTitle: l.listTitle })),
+    }), [statusOptions, priorityOptions, users, lists]);
+    const activeFilters = countActiveFilters(filterFields, filters.values.values);
+    const isFiltering = activeFilters > 0 || !!search.trim();
+    const visibleLists = useMemo(() => filterLists(lists, search, filters.values), [lists, search, filters.values]);
 
     const openCreateList = (): void => {
         setListName('');
@@ -386,10 +430,7 @@ export function TasksTab({ projectId }: TasksTabProps) {
 
     const handleUpdateTaskList = async (taskList: ReduxTaskList): Promise<void> => {
         try {
-            await taskService.updateTaskList(String(taskList.listId), {
-                listTitle: taskList.listTitle,
-                sequence: taskList.sequence || 0,
-            });
+            await taskService.updateTaskList(projectId, taskList.listId, taskList.listTitle);
             dispatch(updateTaskList(taskList));
             toast.success('List updated');
         } catch {
@@ -432,14 +473,24 @@ export function TasksTab({ projectId }: TasksTabProps) {
 
     const handleUpdateTask = async (task: ReduxTask): Promise<void> => {
         try {
-            await taskService.updateTask(String(task.taskId), {
+            // Status-only change (status dropdown) -> PUT /task/status
+            const keys = Object.keys(task);
+            if (keys.length === 2 && keys.includes('taskId') && keys.includes('taskStatus')) {
+                await taskService.updateTaskStatus(projectId, task.taskId, task.taskStatus);
+                dispatch(updateTask(task));
+                toast.success('Status updated');
+                return;
+            }
+            await taskService.updateTask(projectId, task.taskId, {
                 taskTitle: task.taskTitle,
-                taskStatus: task.taskStatus,
                 taskDescription: task.taskDescription || '',
                 taskStartDate: task.startDate || '',
                 taskEndDate: task.endDate || '',
-                priority: task.priority,
             });
+            // status is a separate endpoint - only call it when it actually changed
+            if (task.taskStatus) {
+                await taskService.updateTaskStatus(projectId, task.taskId, task.taskStatus);
+            }
             dispatch(updateTask(task));
             toast.success('Task updated');
         } catch {
@@ -459,10 +510,25 @@ export function TasksTab({ projectId }: TasksTabProps) {
         }
     };
 
-    const handleReorderTaskLists = async (orderedIds: string[]): Promise<void> => {
+    // Neighbour of the moved item in the new order -> (reference, isAbove)
+    const neighbour = (orderedIds: string[], movedId: string) => {
+        const i = orderedIds.indexOf(movedId);
+        if (i < 0 || orderedIds.length < 2) return null;
+        return i < orderedIds.length - 1
+            ? { referenceId: orderedIds[i + 1], isAbove: true }
+            : { referenceId: orderedIds[i - 1], isAbove: false };
+    };
+
+    const handleReorderTaskLists = async (orderedIds: string[], movedId?: string): Promise<void> => {
         try {
-            for (const [index, id] of orderedIds.entries()) {
-                await taskService.updateTaskList(id, { sequence: index });
+            const n = movedId ? neighbour(orderedIds, movedId) : null;
+            if (movedId && n) {
+                await taskService.updateListPosition({
+                    projectId,
+                    taskListId: movedId,
+                    referenceListId: n.referenceId,
+                    isAbove: n.isAbove,
+                });
             }
             dispatch(reorderTaskLists({ projectId, orderedIds }));
             toast.success('Lists reordered');
@@ -473,17 +539,67 @@ export function TasksTab({ projectId }: TasksTabProps) {
     };
 
     const handleReorderTasks = async (
-        listId: string, parentTaskId: string | null, orderedIds: string[]
+        listId: string, parentTaskId: string | null, orderedIds: string[], movedId?: string
     ): Promise<void> => {
         try {
-            for (const [index, id] of orderedIds.entries()) {
-                await taskService.updateTask(id, { sequence: index });
+            const n = movedId ? neighbour(orderedIds, movedId) : null;
+            if (movedId && n) {
+                await taskService.moveTask({
+                    projectId,
+                    taskId: movedId,
+                    targetListId: listId,
+                    targetParentTaskId: parentTaskId,
+                    referenceTaskId: n.referenceId,
+                    isAbove: n.isAbove,
+                });
             }
             dispatch(reorderTasks({ taskListId: listId, parentTaskId, orderedIds }));
             toast.success('Tasks reordered');
         } catch {
             toast.error('Failed to reorder tasks');
             throw new Error();
+        }
+    };
+
+    // Silent reload of the tree (used by the task detail panel after edits)
+    const refreshTree = async (): Promise<void> => {
+        try {
+            const response = await projectApiService.getProjectById(projectId);
+            dispatch(setProjectData({
+                projectId: String(response.data.projectId),
+                lists: response.data.lists || [],
+            }));
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    // Drag & drop across lists / parents, or nesting a task as a subtask (PUT /task/move)
+    const handleMoveTask = async (p: {
+        taskId: string; targetListId: string; targetParentTaskId: string | null;
+        referenceTaskId: string; isAbove: boolean;
+    }): Promise<void> => {
+        const t = toast.loading('Moving task…');
+        try {
+            await taskService.moveTask({
+                projectId,
+                taskId: p.taskId,
+                targetListId: p.targetListId,
+                targetParentTaskId: p.targetParentTaskId,
+                referenceTaskId: p.referenceTaskId,
+                isAbove: p.isAbove,
+            });
+            // tree changed shape (parent / list) -> reload it from the server
+            const response = await projectApiService.getProjectById(projectId);
+            dispatch(setProjectData({
+                projectId: String(response.data.projectId),
+                lists: response.data.lists || [],
+            }));
+            toast.success(p.targetParentTaskId ? 'Task moved' : 'Task moved to list', { id: t });
+        } catch (error) {
+            console.error(error);
+            const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            toast.error(msg || 'Failed to move task', { id: t });
         }
     };
 
@@ -504,7 +620,8 @@ export function TasksTab({ projectId }: TasksTabProps) {
                 taskDescription: d.taskDescription || '',
                 status: mapStatusFromApi(d.taskStatus),
                 taskStatus: d.taskStatus || 'TODO',
-                priority: d.priority || 'medium',
+                taskPriority: priorityOf(d),
+                priority: priorityOf(d),
                 assigneeId: d.assigneeId || '',
                 taskStartDate: d.startDate || '',
                 taskEndDate: d.endDate || '',
@@ -529,34 +646,45 @@ export function TasksTab({ projectId }: TasksTabProps) {
             };
 
             setSelectedTask(mappedTask);
+            setTaskParam(d.taskId);
         } catch {
+            setTaskParam(null);
             toast.error('Failed to load task details');
         } finally {
             setIsDetailLoading(false);
         }
     };
 
+    // reload / shared link: reopen the task named in the URL
+    useEffect(() => {
+        const id = searchParams.get('task');
+        if (id && !selectedTask) openTaskDetailById(id);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     // Table/card se click hone par
     const handleTaskClick = (task: ReduxTask) => {
         openTaskDetailById(task.taskId);
     }
     return (
-        <div className="flex flex-col">
-            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border bg-card/50">
-                <div className="flex items-center gap-1">
-                    <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-                    <Select value={filter} onValueChange={setFilter}>
-                        <SelectTrigger className="h-7 w-[130px] text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Tasks</SelectItem>
-                            <SelectItem value="todo">To Do</SelectItem>
-                            <SelectItem value="in-progress">In Progress</SelectItem>
-                            <SelectItem value="done">Done</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
+        <div className="flex flex-col h-full min-h-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 border-b border-border bg-card/50 shrink-0">
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 shrink-0 relative"
+                    onClick={() => setFilterOpen(true)}
+                    title={activeFilters ? `Filters (${activeFilters} applied)` : 'Filters'}
+                >
+                    <Filter className="h-3.5 w-3.5" />
+                    {activeFilters > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                            {activeFilters}
+                        </span>
+                    )}
+                </Button>
 
-                {viewMode === 'table' && (
+                {(
                     <div className="relative flex-1 max-w-xs">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                         <Input
@@ -573,6 +701,12 @@ export function TasksTab({ projectId }: TasksTabProps) {
                     </div>
                 )}
 
+                {activeFilters > 0 && (
+                    <button onClick={filters.reset} className="text-xs font-semibold text-primary hover:underline">
+                        Clear filters
+                    </button>
+                )}
+
                 <div className="flex-1" />
 
                 <div className="flex items-center gap-2"> 
@@ -583,7 +717,14 @@ export function TasksTab({ projectId }: TasksTabProps) {
                                 viewMode === 'table' ? 'bg-primary/60 text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
                         >
                             <LayoutList className="h-3.5 w-3.5" /> List
-                        </button> 
+                        </button>
+                        <button
+                            onClick={() => setViewMode('board')}
+                            className={cn('h-8 px-3 text-xs font-medium inline-flex items-center gap-1.5 border-x border-border',
+                                viewMode === 'board' ? 'bg-primary/60 text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
+                        >
+                            <Columns3 className="h-3.5 w-3.5" /> Board
+                        </button>
                         <button
                             onClick={() => setViewMode('cards')}
                             className={cn('h-8 px-3 rounded-r-md text-xs font-medium inline-flex items-center gap-1.5',
@@ -598,10 +739,23 @@ export function TasksTab({ projectId }: TasksTabProps) {
                 </div>
             </div>
 
-            <div className="p-4">
-                {viewMode === 'table' ? (
+            <div className={cn('p-3 flex-1 min-h-0', viewMode === 'cards' ? 'overflow-y-auto' : 'overflow-hidden')}>
+                {viewMode === 'board' ? (
+                    <TaskBoard
+                        tasks={boardTasks}
+                        onStatusChange={(t, st) => handleUpdateTask({ taskId: Number(t.taskId), taskStatus: st } as ReduxTask)}
+                        onOpen={(t) => handleTaskClick({ taskId: Number(t.taskId) } as ReduxTask)}
+                    />
+                ) : viewMode === 'table' && isFiltering && visibleLists.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                        <CheckSquare className="h-10 w-10 mb-2 opacity-30" />
+                        <p className="text-sm">No tasks match your search or filters</p>
+                    </div>
+                ) : viewMode === 'table' ? (
                     <TaskTabTable
-                        lists={lists}
+                        storageKey={`rkt.taskTree.${projectId}`}
+                        lists={visibleLists}
+                        forceExpand={isFiltering}
                         users={users}
                         projectId={projectId}
                         onAddTaskList={handleAddTaskList}
@@ -612,6 +766,7 @@ export function TasksTab({ projectId }: TasksTabProps) {
                         onDeleteTask={handleDeleteTask}
                         onReorderTaskLists={handleReorderTaskLists}
                         onReorderTasks={handleReorderTasks}
+                        onMoveTask={handleMoveTask}
                         onEditList={openEditList}
                         onAddTaskListAbove={handleAddTaskListAbove}
                         onAddTaskListBelow={handleAddTaskListBelow}
@@ -633,6 +788,16 @@ export function TasksTab({ projectId }: TasksTabProps) {
                     </div>
                 )}
             </div>
+
+            <ProjectsFilterDrawer
+                open={filterOpen}
+                onOpenChange={setFilterOpen}
+                fields={filterFields}
+                value={filters.values}
+                onApply={filters.setValues}
+                onReset={filters.reset}
+                title="Filter Tasks"
+            />
 
             <TaskListFormModal
                 open={isListModalOpen}
@@ -673,7 +838,8 @@ export function TasksTab({ projectId }: TasksTabProps) {
                     task={selectedTask}
                     users={users}
                     project={project}
-                    onClose={() => setSelectedTask(null)}
+                    onClose={() => { setSelectedTask(null); setTaskParam(null); }}
+                    onChanged={refreshTree}
                     onSelectTask={(taskId) => {
                         openTaskDetailById(taskId);
                     }}
@@ -687,7 +853,8 @@ export function TasksTab({ projectId }: TasksTabProps) {
                             startDate: updatedTask.startDate || '',
                             endDate: updatedTask.endDate,
                             assigneeId: updatedTask.assigneeId || '',
-                            priority: updatedTask.priority || 'medium',
+                            taskPriority: priorityOf(updatedTask),
+                            priority: priorityOf(updatedTask),
                         }));
                         setSelectedTask(updatedTask as any);
                     }}

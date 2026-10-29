@@ -5,34 +5,34 @@ import { format } from 'date-fns';
 
 // ── Design tokens ──
 export const T = {
-  bg: '#fffffff',
+  bg: '#ffffff',
   navy: '#001858',
   para: '#172c66',
-  pink: '#f582ae',
-  peach: '#f3d2c1',
-  teal: '#8bd3dd',
-  white: '#fffffe',
+  pink: '#d9266a',   // brand primary
+  peach: '#cfd8f0',  // cool periwinkle tint (was peach)
+  teal: '#5fc2d1',
+  white: '#ffffff',
 };
 
 export const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  'todo': { label: 'To Do', color: T.navy, bg: `${T.peach}` },
-  'in-progress': { label: 'Open', color: T.white, bg: T.pink },
-  'done': { label: 'Completed', color: T.navy, bg: T.teal },
+  'todo': { label: 'To Do', color: '#334155', bg: '#e2e8f0' },
+  'in-progress': { label: 'In Progress', color: '#ffffff', bg: '#2563eb' },
+  'done': { label: 'Completed', color: '#ffffff', bg: '#059669' },
 };
 
 export function normalizeStatus(status?: string): string {
   if (!status) return 'todo';
   const s = status.toUpperCase();
-  if (s === 'DONE') return 'done';
-  if (s === 'IN_PROGRESS') return 'in-progress';
+  if (s === 'DONE' || s === 'COMPLETED' || s === 'CLOSED') return 'done';
+  if (['IN_PROGRESS', 'IN_REVIEW', 'TO_BE_TESTED'].includes(s)) return 'in-progress';
   return 'todo';
 }
 
 export const PRIORITY_CONFIG: Record<string, { label: string; dot: string }> = {
-  high: { label: 'High', dot: '#e0577b' },
-  medium: { label: 'Medium', dot: T.pink },
-  low: { label: 'Low', dot: T.teal },
-  critical: { label: 'Critical', dot: '#c23a5e' },
+  high: { label: 'High', dot: '#ea580c' },
+  medium: { label: 'Medium', dot: '#2563eb' },
+  low: { label: 'Low', dot: '#64748b' },
+  critical: { label: 'Critical', dot: '#dc2626' },
 };
 
 // ══════════════════════════════════════════════

@@ -15,7 +15,7 @@ export type StatusOption = {
 export const STATUS_OPTIONS: StatusOption[] = [
   { value: 'active',      label: 'Active',      dot: 'bg-emerald-500', badge: 'bg-emerald-100 border-emerald-300', text: 'text-emerald-700' },
   { value: 'in-progress', label: 'In Progress', dot: 'bg-blue-500',    badge: 'bg-blue-100 border-blue-300',    text: 'text-blue-700' },
-  { value: 'on-hold',     label: 'On Hold',     dot: 'bg-amber-500',   badge: 'bg-amber-100 border-amber-300',   text: 'text-amber-700' },
+  { value: 'on-hold',     label: 'On Hold',     dot: 'bg-orange-500',   badge: 'bg-orange-100 border-orange-300',   text: 'text-orange-800' },
   { value: 'delayed',     label: 'Delayed',     dot: 'bg-red-500',     badge: 'bg-red-100 border-red-300',     text: 'text-red-700' },
   { value: 'completed',   label: 'Completed',   dot: 'bg-violet-500',  badge: 'bg-violet-100 border-violet-300', text: 'text-violet-700' },
 ];

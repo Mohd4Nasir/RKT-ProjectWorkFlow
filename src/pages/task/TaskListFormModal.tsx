@@ -33,15 +33,15 @@ export function TaskListFormModal({
 }: TaskListFormModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-<DialogContent className="max-w-xl p-0 overflow-hidden gap-0 rounded-2xl border-none shadow-2xl"> 
+<DialogContent className="max-w-xl p-0 overflow-y-auto max-h-[94dvh] gap-0 rounded-2xl border-none shadow-2xl"> 
   
          <div
   className="relative px-8 pt-8 pb-6"
-  style={{ background: "#F9CBBF" }}
+  style={{ background: 'var(--gradient-hero)' }}
 >
   <div
     className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-20"
-    style={{ background: "#f582ae" }}
+    style={{ background: "hsl(337 78% 62%)" }}
   />
   <div
     className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl opacity-10"
@@ -51,22 +51,22 @@ export function TaskListFormModal({
   <div className="relative flex items-start gap-4">
     <div
       className="h-14 w-14 rounded-2xl flex items-center justify-center"
-      style={{ background: "rgba(0,24,88,.08)" }}
+      style={{ background: "rgba(255,255,255,0.16)" }}
     >
       {editing ? (
-        <Briefcase className="h-7 w-7 text-[#001858]" />
+        <Briefcase className="h-7 w-7 text-white" />
       ) : (
-        <File className="h-7 w-7 text-[#001858]" />
+        <File className="h-7 w-7 text-white" />
       )}
     </div>
 
     <div className="flex-1">
       <DialogHeader className="space-y-1">
-        <DialogTitle className="text-2xl font-bold text-[#001858]">
+        <DialogTitle className="text-2xl font-bold text-white">
           {editing ? "Edit Task List" : "Create New Task List"}
         </DialogTitle>
 
-        <p className="text-sm text-[#001858]/70">
+        <p className="text-sm text-white/75">
           {editing
             ? "Update the task list information."
             : "Create a new list to organize your tasks."}
@@ -78,13 +78,13 @@ export function TaskListFormModal({
 
 <div
   className="px-8 py-6 space-y-6"
-  style={{ background: "#fff" }}
+  style={{ background: 'hsl(var(--card))' }}
           >
 
           <div className="space-y-1.5">
            <Label
   htmlFor="listName"
-  className="text-sm font-semibold text-[#001858]"
+  className="text-sm font-semibold text-foreground"
 >
   Name <span className="text-[#f582ae]">*</span>
 </Label>
@@ -95,10 +95,10 @@ export function TaskListFormModal({
   value={name}
   onChange={(e) => onNameChange(e.target.value)}
   onKeyDown={(e) => e.key === "Enter" && onSave()}
-  className="h-12 rounded-xl px-4 text-[#001858] focus-visible:ring-0 focus-visible:ring-offset-0"
+  className="h-12 rounded-xl px-4 text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
   style={{
-    border: "2px solid #f3d2c1",
-    background: "#fff",
+    border: "1px solid hsl(var(--input))",
+    background: 'hsl(var(--card))',
     borderRadius: "12px",
   }}
 />
@@ -108,14 +108,14 @@ export function TaskListFormModal({
 <DialogFooter
   className="px-8 py-5 border-t-2 flex items-center justify-end gap-3"
   style={{
-    borderColor: "#f3d2c1",
-    background: "#fff",
+    borderColor: "hsl(var(--border))",
+    background: 'hsl(var(--card))',
   }}
 >          <Button
   variant="ghost"
   onClick={() => onOpenChange(false)}
-  className="rounded-xl h-11 px-6 font-medium hover:bg-[#f3d2c1]"
-  style={{ color: "#001858" }}
+  className="rounded-xl h-11 px-6 font-medium hover:bg-muted"
+  style={{ color: 'hsl(var(--foreground))' }}
 >
   Cancel
 </Button>
@@ -123,8 +123,8 @@ export function TaskListFormModal({
   onClick={onSave}
   className="rounded-xl h-11 px-8 font-semibold shadow-md transition-all duration-200 hover:scale-105 hover:shadow-lg"
   style={{
-    background: "#EEBBC3",
-    color: "#001858",
+    background: 'hsl(var(--primary))',
+    color: 'hsl(var(--primary-foreground))',
   }}
 >
   {editing ? "Save Changes" : "Create List"}

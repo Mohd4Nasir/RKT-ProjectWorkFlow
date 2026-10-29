@@ -41,6 +41,7 @@
 
 
 
+import { notifySessionExpired } from "@/services/authErrors";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 
@@ -48,7 +49,6 @@ import keycloak from "@/lib/keycloak";
 
 import {
   loginSuccess,
-  logout,
   setKeycloakInitialized,
   setTokens,
 } from "@/store/slices/authSlice";
@@ -127,13 +127,10 @@ export const KeycloakProvider: React.FC<{ children: React.ReactNode }> = ({
                 console.log("Token Refreshed");
               }
             } catch (err) {
+              // Don't force the user out of the app - show a message instead.
+              // They can choose "Log in again" from the toast (or the normal Logout).
               console.error("Token Refresh Failed", err);
-
-              dispatch(logout());
-
-              keycloak.logout({
-                redirectUri: window.location.origin,
-              });
+              notifySessionExpired();
             }
           }, 25000);
         }

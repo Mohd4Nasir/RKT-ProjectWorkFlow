@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { FilterValues } from '../ProjectsFilterDrawer';
 
-export const emptyFilterValues: FilterValues = { match: 'any', values: {} };
+export const emptyFilterValues: FilterValues = { match: 'all', values: {} };
 
 export function matchPredicates(predicates: boolean[], mode: 'any' | 'all') {
   if (predicates.length === 0) return true;

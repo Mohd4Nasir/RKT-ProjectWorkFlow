@@ -41,7 +41,7 @@ export const OwnerSelect = memo(function OwnerSelect({ users, value, onChange, c
           ) : (
             <span className="text-xs text-muted-foreground flex-1">Unassigned</span>
           )}
-          <ChevronsUpDown className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity" />
+          <ChevronsUpDown className="h-3 w-3 text-muted-foreground opacity-70 group-hover:opacity-100 hover:opacity-100 flex-shrink-0 transition-opacity" />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-0 shadow-lg" align="start">

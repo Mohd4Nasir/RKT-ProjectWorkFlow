@@ -50,7 +50,7 @@ export function InlineEdit({ value, onSave, className, inputClassName, placehold
       <button
         type="button"
         onClick={() => onClickWhenIdle ? onClickWhenIdle() : setEditing(true)}
-        className="text-left font-medium text-foreground hover:text-[#FF8E3C] truncate flex-1"
+        className="text-left font-medium text-foreground hover:text-primary truncate flex-1"
         title={value}
       >
         {value || <span className="text-muted-foreground italic">{placeholder}</span>}
@@ -58,7 +58,7 @@ export function InlineEdit({ value, onSave, className, inputClassName, placehold
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-        className="opacity-0 group-hover/inline:opacity-100 text-muted-foreground hover:text-primary p-0.5 rounded"
+        className="opacity-70 group-hover/inline:opacity-100 hover:opacity-100 text-muted-foreground hover:text-primary p-0.5 rounded"
         aria-label="Edit"
       >
         <Pencil className="h-3.5 w-3.5" />

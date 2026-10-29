@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Wip } from '@/components/Wip';
 import { Button }   from '@/components/ui/button';
 import { Input }    from '@/components/ui/input';
 import { toast }    from 'sonner';
@@ -44,10 +45,10 @@ export function MilestonesTab({ projectId }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Milestones</h3>
+          <h3 className="text-lg font-semibold">Milestones <Wip hint="Not connected to the server yet" /></h3>
           <p className="text-sm text-muted-foreground mt-0.5">Track key project checkpoints</p>
         </div>
-        <Button onClick={handleCreate} className="bg-[#E07B39] hover:bg-[#E07B39]/90 text-white" size="sm">
+        <Button onClick={handleCreate} size="sm">
           <Plus className="h-4 w-4 mr-2" /> Add Milestone
         </Button>
       </div>
@@ -82,7 +83,7 @@ export function MilestonesTab({ projectId }: Props) {
                     Due: {format(new Date(m.dueDate), 'dd MMM yyyy')}
                   </p>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 hover:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(m.id)}>
                     <Edit className="h-3.5 w-3.5" />
                   </Button>

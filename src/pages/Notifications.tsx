@@ -16,6 +16,7 @@ export default function Notifications() {
   return (
     <div className="space-y-6">
       <PageHeader
+        wip="Sample notifications — not connected to the server yet"
         title="Notifications"
         subtitle={unread.length ? `You have ${unread.length} unread notification${unread.length > 1 ? 's' : ''}` : 'You\'re all caught up'}
         actions={<Button variant="outline" onClick={() => dispatch(markAllRead())}><Check className="h-4 w-4 mr-1" />Mark all read</Button>}

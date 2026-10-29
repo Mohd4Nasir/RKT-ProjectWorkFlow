@@ -130,8 +130,8 @@ export function ProtectedRoute({ children, roles }: Props) {
     );
 
     if (!hasRequiredRole) {
-      // User doesn't have required role → go to dashboard
-      return <Navigate to="/dashboard" replace />;
+      // User doesn't have required role → show 403 page
+      return <Navigate to="/403" replace />;
     }
   }
 

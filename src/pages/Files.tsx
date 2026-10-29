@@ -42,6 +42,7 @@ export default function Files() {
     <div className="space-y-6">
       <PageHeader
         title="Files"
+        wip="Sample files — uploads are not saved to the server yet"
         subtitle="Documents and attachments shared across projects."
         actions={<Button className="bg-gradient-primary shadow-glow" onClick={onUpload}><Upload className="h-4 w-4 mr-1" />Upload</Button>}
       />

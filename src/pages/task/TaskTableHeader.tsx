@@ -41,16 +41,16 @@ export function TaskTableHeader({
     { label: 'Tasks', val: rootTaskCount, cls: 'text-blue-600' },
     { label: 'Subtasks', val: subTaskCount, cls: 'text-teal-600' },
     { label: 'Done', val: doneCount, cls: 'text-emerald-600' },
-    { label: 'Active', val: activeCount, cls: 'text-amber-600' },
+    { label: 'Active', val: activeCount, cls: 'text-blue-600' },
   ];
 
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 mb-5 border-b rounded-2xl border-slate-200 bg-secondary-55 flex-wrap gap-2">
+    <div className="flex items-center justify-between px-4 py-2 mb-3 rounded-xl border border-border bg-card shadow-soft flex-wrap gap-2">
       <div className="flex items-center gap-4 text-xs">
         {stats.map(s => (
           <span key={s.label} className="flex items-center gap-1">
             <strong className={cn('text-sm', s.cls)}>{s.val}</strong>
-            <span className="text-slate-400">{s.label}</span>
+            <span className="text-muted-foreground">{s.label}</span>
           </span>
         ))}
       </div>

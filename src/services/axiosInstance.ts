@@ -6,6 +6,12 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 import { ensureFreshToken, getAccessToken } from "./keycloakService";
+import {
+  notifyForbidden,
+  notifyNetworkError,
+  notifySessionExpired,
+  notifyUnauthorized,
+} from "./authErrors";
 
 interface RetryableConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -29,6 +35,8 @@ axiosInstance.interceptors.request.use(
     // console.log(" Token refresh status:", refreshed);
 
     if (!refreshed) {
+      // Don't redirect / log out here - just tell the user.
+      notifySessionExpired();
       return Promise.reject(new Error("Session expired. Please log in again."));
     }
 
@@ -54,25 +62,34 @@ axiosInstance.interceptors.response.use(
     console.error(
       "[API Response Error]",
       error.response?.data,
-      error.config.url,
+      error.config?.url,
       error.message,
-      error,
     );
-    const originalRequest = error.config as RetryableConfig | undefined;
 
-    // Only handle 401 Unauthorized
-    if (error.response?.status !== 401 || !originalRequest) {
+    // No response at all -> server unreachable / CORS / timeout
+    if (!error.response) {
+      if (error.code === "ERR_NETWORK") notifyNetworkError();
       return Promise.reject(error);
     }
 
-    // Infinite-loop guard
-    if (originalRequest._retry) {
-      const { performLogout } = await import("./keycloakService");
-      const { store } = await import("@/store");
-      const { logout } = await import("@/store/slices/authSlice");
+    const status = error.response.status;
 
-      store.dispatch(logout());
-      await performLogout();
+    if (status === 403) {
+      notifyForbidden();
+      return Promise.reject(error);
+    }
+
+    const originalRequest = error.config as RetryableConfig | undefined;
+
+    // Everything except 401 is handled by the caller
+    if (status !== 401 || !originalRequest) {
+      return Promise.reject(error);
+    }
+
+    // Already retried once with a fresh token and still 401:
+    // this is a permission problem on that endpoint, NOT an expired session.
+    if (originalRequest._retry) {
+      notifyUnauthorized();
       return Promise.reject(error);
     }
 
@@ -82,18 +99,12 @@ axiosInstance.interceptors.response.use(
     const refreshed = await ensureFreshToken();
 
     if (!refreshed) {
-      const { performLogout } = await import("./keycloakService");
-      const { store } = await import("@/store");
-      const { logout } = await import("@/store/slices/authSlice");
-
-      store.dispatch(logout());
-      await performLogout();
+      notifySessionExpired();
       return Promise.reject(error);
     }
 
     // Retry with new token
     const newToken = getAccessToken();
-    console.log("Retrying request with new token:", newToken);
     if (newToken) {
       originalRequest.headers = originalRequest.headers ?? new AxiosHeaders();
 

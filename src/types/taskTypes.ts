@@ -11,6 +11,9 @@ export interface SubTaskNode {
   assigneeId?: string;
   createdBy?:string
   
+  /** from the API: NONE | LOW | MEDIUM | HIGH */
+  taskPriority?: string;
+  /** @deprecated old name — read it through priorityOf() */
   priority?: string;
   parentTaskId?: number | null;
   subTask?: SubTaskNode[]; 
