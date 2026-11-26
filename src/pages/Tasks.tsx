@@ -16,11 +16,13 @@ import { cn } from '@/lib/utils';
 import { useAppSelector } from '@/store';
 import { GlobalTask, useAllTasks } from '@/hooks/useAllTasks';
 import { taskService } from '@/services/taskservice';
+import { IssueCountBadge } from '@/pages/task/IssueCountBadge';
 import { fmtDate } from '@/pages/projects/projectUi';
 import {
   isOverdueDate, isTaskDone, priorityOf, priorityUi, taskStatusUi,
 } from '@/pages/task/taskUi';
 import { useTaskStatuses } from '@/pages/task/useTaskStatuses';
+import { showError } from '@/lib/errorAlert';
 
 interface Props { mine?: boolean; }
 
@@ -76,6 +78,7 @@ export default function Tasks({ mine }: Props) {
     endDate: t.endDate,
     listTitle: t.listTitle,
     projectTitle: t.projectTitle,
+    openIssueCount: t.openIssueCount,
     subtaskTotal: t.subtaskTotal,
     subtaskDone: t.subtaskDone,
     isSubtask: !!t.parentTaskId,
@@ -86,9 +89,9 @@ export default function Tasks({ mine }: Props) {
     try {
       await taskService.updateTaskStatus(projectId, taskId, next);
       toast.success(`Moved to ${taskStatusUi(next).label}`);
-    } catch {
+    } catch (err) {
       setStatusLocal(projectId, taskId, prev); // roll back
-      toast.error('Failed to update status');
+      showError(err, 'Failed to update status'); // 409 = open issues block completion
     }
   };
 
@@ -258,6 +261,7 @@ function ListView({
                 <td className="px-4 py-2.5 font-semibold max-w-[320px] truncate">
                   {t.parentTaskId ? <span className="text-muted-foreground mr-1">↳</span> : null}
                   <span className={cn(isTaskDone(t.taskStatus) && 'line-through text-muted-foreground')}>{t.taskTitle}</span>
+                  <IssueCountBadge count={t.openIssueCount} className="ml-2 align-middle" />
                 </td>
                 <td className="px-4 py-2.5 text-muted-foreground max-w-[200px] truncate">{t.projectTitle}</td>
                 <td className="px-4 py-2.5 text-muted-foreground max-w-[160px] truncate">{t.listTitle}</td>

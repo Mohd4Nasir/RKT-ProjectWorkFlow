@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { projectApiService } from '@/services/projectsApiService';
 import { Project } from '@/types/ProejctsType';
 import { fmtDate, isProjectOverdue, projectProgress, statusUi } from '@/pages/projects/projectUi';
+import { showError } from '@/lib/errorAlert';
 
 const STATUS_HEX: Record<string, string> = {
   OPEN: '#10b981', IN_PROGRESS: '#3b82f6', ON_HOLD: '#f97316',
@@ -42,8 +43,9 @@ export default function Reports() {
     setError(false);
     try {
       setProjects(await projectApiService.getProjects());
-    } catch {
+    } catch (err) {
       setError(true);
+      showError(err, 'Failed to load reports');
     } finally {
       setLoading(false);
     }

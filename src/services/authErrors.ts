@@ -1,13 +1,21 @@
-import { toast } from "sonner";
+import { enqueueAlert } from "@/lib/errorAlert";
 
 /**
- * Auth / permission problems are SHOWN to the user, never used as a reason
- * to silently kick them out of the app. The only places that log the user
- * out are the explicit Logout actions (header menu / useAuth.logout) and the
- * "Log in again" button offered below.
+ * Auth problems are SHOWN to the user, never used as a reason to silently kick
+ * them out of the app. The only places that log the user out are the explicit
+ * Logout actions (header menu / useAuth.logout) and the "Log in again" button
+ * offered below.
  *
- * Every toast has a fixed id, so a burst of failing requests shows one toast.
+ * 401 / 403 / network errors are shown by showError() where the call was made.
  */
+
+/** Thrown (or flagged on an API error) once the session-expired popup has been requested. */
+export class SessionExpiredError extends Error {
+  sessionExpired = true;
+  constructor() {
+    super("Session expired. Please log in again.");
+  }
+}
 
 async function logoutNow() {
   const { store } = await import("@/store");
@@ -17,40 +25,24 @@ async function logoutNow() {
   await performLogout(`${window.location.origin}/login`);
 }
 
+/** the background token timer fails every few seconds: don't reopen the popup each time */
+const BACKGROUND_COOLDOWN = 5 * 60_000;
+let lastShown = 0;
+
 /** Token can't be refreshed any more (idle too long / session revoked). */
-export function notifySessionExpired() {
-  toast.error("Your session has expired", {
-    id: "auth-session-expired",
-    description: "Some actions will fail until you log in again.",
-    duration: 10_000,
-    action: { label: "Log in again", onClick: () => void logoutNow() },
-  });
-}
-
-/** Server answered 401 even with a fresh token. */
-export function notifyUnauthorized(what?: string) {
-  toast.error("Unauthorized", {
-    id: "auth-unauthorized",
-    description: what
-      ? `You are not authorized to ${what}.`
-      : "You are not authorized to perform this action.",
-    duration: 6_000,
-  });
-}
-
-/** Server answered 403. */
-export function notifyForbidden() {
-  toast.error("Permission denied", {
-    id: "auth-forbidden",
-    description: "Your role doesn't allow this action. Contact your administrator.",
-    duration: 6_000,
-  });
-}
-
-export function notifyNetworkError() {
-  toast.error("Can't reach the server", {
-    id: "net-error",
-    description: "Check your connection or try again in a moment.",
-    duration: 6_000,
+export function notifySessionExpired({ background = false } = {}) {
+  if (background && Date.now() - lastShown < BACKGROUND_COOLDOWN) return;
+  lastShown = Date.now();
+  enqueueAlert({
+    key: "auth-session-expired",
+    options: {
+      icon: "warning",
+      title: "Your session has expired",
+      text: "Some actions will fail until you log in again.",
+      confirmButtonText: "Log in again",
+      showCancelButton: true,
+      cancelButtonText: "Close",
+    },
+    onConfirm: () => void logoutNow(),
   });
 }

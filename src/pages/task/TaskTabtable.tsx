@@ -17,6 +17,7 @@ import { ContextMenu } from '../../components/ui/contextMenu';
 import { Users } from '@/types/ProejctsType';
 import { TaskTableHeader } from './TaskTableHeader';
 import { FullscreenButton, FULLSCREEN_CLASS, useFullscreen } from '@/components/FullscreenButton';
+import { showWarning } from '@/lib/errorAlert';
 
 // ── Tree search helpers (D&D ke liye — render order ko touch nahi karte) ──
 function findInNodes(nodes: SubTaskNode[], taskId: number): SubTaskNode | null {
@@ -328,7 +329,7 @@ export function TaskTabTable({
 
     // never drop a task into its own subtree
     if (isInSubtree(src.id, targetId)) {
-      toast.error("A task can't be moved inside its own subtask");
+      showWarning("A task can't be moved inside its own subtask");
       return;
     }
 
@@ -395,10 +396,10 @@ export function TaskTabTable({
         <table className="w-full border-collapse text-sm">
           <thead className="sticky top-0 z-10">
             <tr className="bg-sidebar">
-              {['Name', 'Status', 'Priority', 'Due Date', ''].map((h, i) => (
+              {['Name', 'Issues', 'Status', 'Priority', 'Due Date', ''].map((h, i) => (
                 <th key={i} className={cn(
                   'px-3 py-2.5 text-[11px] font-semibold text-white/75 uppercase tracking-wider whitespace-nowrap',
-                  i === 4 ? 'text-right w-24' : 'text-left'
+                  i === 5 ? 'text-right w-24' : i === 1 ? 'text-center w-20' : 'text-left'
                 )}>{h}</th>
               ))}
             </tr>
@@ -406,7 +407,7 @@ export function TaskTabTable({
           <tbody>
             {sortedLists.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-16 text-slate-400">
+                <td colSpan={6} className="text-center py-16 text-slate-400">
                   <Folder size={32} className="mx-auto mb-2 opacity-20" />
                   <p className="text-sm">No task lists yet — click "New List" to start</p>
                 </td>
@@ -464,7 +465,7 @@ export function TaskTabTable({
                           <Badge variant="secondary" className="text-[10px] bg-primary/15 text-primary hover:bg-primary/15 px-2 py-0 h-4 font-semibold">{totalTaskandSubTask} items</Badge>
                         </div>
                       </td>
-                      <td colSpan={3} />
+                      <td colSpan={4} />
                       <td className="px-3 py-2">
                         <div className="flex items-center justify-end gap-0.5">
                           <Button variant="ghost" size="icon" className="h-6 w-6" title="Add task" onClick={() => onSimpleAddTask(listIdStr, null)}>
@@ -480,7 +481,7 @@ export function TaskTabTable({
                     {isExpanded && (
                       rootTasksForList.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="py-3 text-center text-[12px] text-slate-400">No tasks yet — click + to add one</td>
+                          <td colSpan={6} className="py-3 text-center text-[12px] text-slate-400">No tasks yet — click + to add one</td>
                         </tr>
                       ) : (
                         rootTasksForList.map(task => (

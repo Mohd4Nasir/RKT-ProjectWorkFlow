@@ -1,50 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { projectApiService } from "@/services/projectsApiService";
 import { cn } from "@/lib/utils";
+import { useSearchParams } from "react-router-dom";
+import { activityTarget, moveNames, targetToParams, type ActivityRow } from "@/utils/activity";
+import ActivityCardBody from "./ActivityCardBody";
 import {
     Activity as ActivityIcon,
     AlertCircle,
-    CheckCircle2,
     ClipboardList,
     Clock,
+    FileText,
     FolderPlus,
     Inbox,
-    Pencil,
+    MessageSquare,
     RefreshCw,
-    Trash2,
     UserPlus,
 } from "lucide-react";
-
-// Metadata varies by activityType, so keep it loose and read fields defensively
-interface ActivityMetadata {
-    // TASK_CREATED / TASK_*
-    createdByUserId?: number;
-    createdByUserName?: string;
-    taskId?: number;
-    taskName?: string;
-
-    // MEMBER_ADDED
-    addedByUserId?: number;
-    addedByUserName?: string;
-    memberId?: number;
-    memberName?: string;
-    memberRole?: string;
-
-    // PROJECT_CREATED
-    projectId?: number;
-    projectTitle?: string;
-
-    [key: string]: unknown;
-}
-
-interface Activity {
-    id: number;
-    projectId: number;
-    activityType: string;
-    resourceType: string;
-    createdAt: string;
-    metadata: ActivityMetadata;
-}
+import { getErrorMessage, showError } from '@/lib/errorAlert';
 
 interface ActivityTabProps {
     projectId: number;
@@ -54,7 +26,7 @@ interface ActivityTabProps {
  * One colour family per kind of activity. Class names are written out in full
  * so Tailwind can see them, each with a dark-mode pair.
  */
-type CategoryKey = "task" | "member" | "project" | "update" | "done" | "delete" | "other";
+type CategoryKey = "project" | "task" | "member" | "comment" | "issue" | "document" | "worklog" | "other";
 
 interface Category {
     label: string;
@@ -71,6 +43,12 @@ interface Category {
 }
 
 const CATEGORIES: Record<CategoryKey, Category> = {
+    project: {
+        label: "Project", icon: FolderPlus,
+        node: "bg-emerald-500", bar: "border-l-emerald-500", dot: "bg-emerald-500",
+        soft: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200",
+        tile: "from-emerald-500/15 to-emerald-500/5 border-emerald-500/30 text-emerald-700 dark:text-emerald-300",
+    },
     task: {
         label: "Tasks", icon: ClipboardList,
         node: "bg-blue-500", bar: "border-l-blue-500", dot: "bg-blue-500",
@@ -83,67 +61,51 @@ const CATEGORIES: Record<CategoryKey, Category> = {
         soft: "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200",
         tile: "from-violet-500/15 to-violet-500/5 border-violet-500/30 text-violet-700 dark:text-violet-300",
     },
-    project: {
-        label: "Project", icon: FolderPlus,
-        node: "bg-emerald-500", bar: "border-l-emerald-500", dot: "bg-emerald-500",
-        soft: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200",
-        tile: "from-emerald-500/15 to-emerald-500/5 border-emerald-500/30 text-emerald-700 dark:text-emerald-300",
+    comment: {
+        label: "Comments", icon: MessageSquare,
+        node: "bg-cyan-500", bar: "border-l-cyan-500", dot: "bg-cyan-500",
+        soft: "bg-cyan-100 text-cyan-800 dark:bg-cyan-500/20 dark:text-cyan-200",
+        tile: "from-cyan-500/15 to-cyan-500/5 border-cyan-500/30 text-cyan-700 dark:text-cyan-300",
     },
-    update: {
-        label: "Updates", icon: Pencil,
+    issue: {
+        label: "Issues", icon: AlertCircle,
+        node: "bg-orange-500", bar: "border-l-orange-500", dot: "bg-orange-500",
+        soft: "bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-200",
+        tile: "from-orange-500/15 to-orange-500/5 border-orange-500/30 text-orange-700 dark:text-orange-300",
+    },
+    document: {
+        label: "Documents", icon: FileText,
         node: "bg-amber-500", bar: "border-l-amber-500", dot: "bg-amber-500",
         soft: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200",
         tile: "from-amber-500/15 to-amber-500/5 border-amber-500/30 text-amber-700 dark:text-amber-300",
     },
-    done: {
-        label: "Completed", icon: CheckCircle2,
-        node: "bg-teal-500", bar: "border-l-teal-500", dot: "bg-teal-500",
-        soft: "bg-teal-100 text-teal-800 dark:bg-teal-500/20 dark:text-teal-200",
-        tile: "from-teal-500/15 to-teal-500/5 border-teal-500/30 text-teal-700 dark:text-teal-300",
-    },
-    delete: {
-        label: "Removed", icon: Trash2,
-        node: "bg-rose-500", bar: "border-l-rose-500", dot: "bg-rose-500",
-        soft: "bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200",
-        tile: "from-rose-500/15 to-rose-500/5 border-rose-500/30 text-rose-700 dark:text-rose-300",
+    worklog: {
+        label: "Work logs", icon: Clock,
+        node: "bg-fuchsia-500", bar: "border-l-fuchsia-500", dot: "bg-fuchsia-500",
+        soft: "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-500/20 dark:text-fuchsia-200",
+        tile: "from-fuchsia-500/15 to-fuchsia-500/5 border-fuchsia-500/30 text-fuchsia-700 dark:text-fuchsia-300",
     },
     other: {
         label: "Other", icon: ActivityIcon,
         node: "bg-slate-500", bar: "border-l-slate-400", dot: "bg-slate-500",
-        soft: "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-200",
+        soft: "bg-slate-100 text-slate-800 dark:bg-slate-500/20 dark:text-slate-200",
         tile: "from-slate-500/15 to-slate-500/5 border-slate-500/30 text-slate-700 dark:text-slate-300",
     },
 };
 
-const categoryOf = (activityType: string): CategoryKey => {
-    const k = activityType?.toLowerCase() ?? "";
-    if (k.includes("delet") || k.includes("remov")) return "delete";
-    if (k.includes("complet") || k.includes("done") || k.includes("closed")) return "done";
-    if (k.includes("member")) return "member";
-    if (k.includes("updat") || k.includes("edit") || k.includes("status") || k.includes("chang")) return "update";
-    if (k.includes("task")) return "task";
-    if (k.includes("project")) return "project";
-    return "other";
-};
-
-const initials = (name: string) =>
-    name.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("") || "?";
-
-/** stable colour per person so the same actor always looks the same */
-const AVATAR_COLORS = [
-    "bg-blue-500", "bg-violet-500", "bg-emerald-500", "bg-amber-500",
-    "bg-rose-500", "bg-teal-500", "bg-indigo-500", "bg-fuchsia-500",
+/** by what the activity is about; unknown types land in "Other" */
+const CATEGORY_PREFIX: [RegExp, CategoryKey][] = [
+    [/^PROJECT_/, "project"],
+    [/^(TASK_|TASKLIST_)/, "task"],
+    [/^MEMBER_/, "member"],
+    [/^COMMENT_/, "comment"],
+    [/^ISSUE_/, "issue"],
+    [/^(ATTACHMENT_|FOLDER_|FILE_)/, "document"],
+    [/^WORKLOG_/, "worklog"],
 ];
-const avatarColor = (name: string) => {
-    let h = 0;
-    for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-    return AVATAR_COLORS[h % AVATAR_COLORS.length];
-};
 
-const timeOf = (iso: string) => {
-    const d = new Date(iso);
-    return isNaN(d.getTime()) ? "" : d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-};
+const categoryOf = (activityType: string): CategoryKey =>
+    CATEGORY_PREFIX.find(([re]) => re.test(activityType.toUpperCase()))?.[1] ?? "other";
 
 const dayKey = (iso: string) => {
     const d = new Date(iso);
@@ -161,55 +123,18 @@ const dayLabel = (iso: string) => {
     return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 };
 
-// Normalizes different activityType shapes into one display model
-const resolveActivityContent = (activity: Activity) => {
-    const { activityType, metadata, resourceType } = activity;
-    const type = activityType?.toUpperCase() ?? "";
-
-    if (type.includes("MEMBER")) {
-        return {
-            title: metadata.memberName ?? "Unknown member",
-            subtitle: metadata.memberRole ? `Role: ${metadata.memberRole}` : undefined,
-            actor: metadata.addedByUserName ?? "Unknown user",
-            tag: resourceType,
-        };
-    }
-
-    if (type.includes("PROJECT")) {
-        return {
-            title: metadata.projectTitle ?? "Untitled project",
-            subtitle: metadata.projectId ? `Project #${metadata.projectId}` : undefined,
-            actor: metadata.createdByUserName ?? "Unknown user",
-            tag: resourceType,
-        };
-    }
-
-    if (type.includes("TASK")) {
-        return {
-            title: metadata.taskName ?? "Untitled task",
-            subtitle: metadata.taskId ? `Task #${metadata.taskId}` : undefined,
-            actor: metadata.createdByUserName ?? "Unknown user",
-            tag: resourceType,
-        };
-    }
-
-    // Fallback for any activityType not explicitly handled
-    return {
-        title: activityType.replace(/_/g, " "),
-        subtitle: undefined,
-        actor:
-            (metadata.createdByUserName as string) ||
-            (metadata.addedByUserName as string) ||
-            "Unknown user",
-        tag: resourceType,
-    };
-};
-
 const ActivityTab = ({ projectId }: ActivityTabProps) => {
-    const [activityData, setActivityData] = useState<Activity[]>([]);
+    const [activityData, setActivityData] = useState<ActivityRow[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [filter, setFilter] = useState<CategoryKey | "all">("all");
+    const [, setSearchParams] = useSearchParams();
+
+    // click a row -> jump to what it is about (task panel / comments / issue / documents / members ...)
+    const openActivity = (a: ActivityRow) => {
+        const target = activityTarget(a);
+        if (target) setSearchParams(targetToParams(target));
+    };
 
     const fetchActivityData = async (id: number) => {
         try {
@@ -220,7 +145,8 @@ const ActivityTab = ({ projectId }: ActivityTabProps) => {
             setActivityData(Array.isArray(response?.data) ? response.data : []);
         } catch (err) {
             console.error("Error fetching activity data:", err);
-            setError("Failed to load activity data.");
+            setError(getErrorMessage(err, "Failed to load activity data."));
+            showError(err, "Failed to load activity");
         } finally {
             setLoading(false);
         }
@@ -232,12 +158,26 @@ const ActivityTab = ({ projectId }: ActivityTabProps) => {
         }
     }, [projectId]);
 
+    // TASK_MOVED only carries list / parent task ids: load the board to show their names
+    const hasMoves = activityData.some((a) => a.activityType === "TASK_MOVED");
+    const [lists, setLists] = useState<Parameters<typeof moveNames>[0]>([]);
+    useEffect(() => {
+        if (!hasMoves) return;
+        let live = true;
+        projectApiService
+            .getProjectById(String(projectId))
+            .then((res) => { if (live) setLists(res?.data?.lists ?? []); })
+            .catch((err) => console.error("Error fetching list names:", err)); // ids are shown instead
+        return () => { live = false; };
+    }, [projectId, hasMoves, activityData]);
+    const names = useMemo(() => moveNames(lists, activityData), [lists, activityData]);
+
     // newest first, tagged with its category
     const items = useMemo(
         () =>
             [...activityData]
                 .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
-                .map((a) => ({ activity: a, cat: categoryOf(a.activityType) })),
+                .map((a) => ({ activity: a, cat: categoryOf(a.activityType ?? "") })),
         [activityData],
     );
 
@@ -291,7 +231,7 @@ const ActivityTab = ({ projectId }: ActivityTabProps) => {
                 {/* Summary tiles + filters */}
                 {!loading && !error && items.length > 0 && (
                     <div className="px-4 pt-4 sm:px-6 space-y-3">
-                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                             {presentCats.map((k) => {
                                 const c = CATEGORIES[k];
                                 const Icon = c.icon;
@@ -402,14 +342,14 @@ const ActivityTab = ({ projectId }: ActivityTabProps) => {
                                         {g.rows.map(({ activity, cat }) => {
                                             const c = CATEGORIES[cat];
                                             const Icon = c.icon;
-                                            const content = resolveActivityContent(activity);
+                                            const canOpen = !!activityTarget(activity);
 
                                             return (
                                                 <li key={activity.id} className="relative mb-2 ml-6 last:mb-0">
                                                     {/* Timeline node */}
                                                     <span
                                                         className={cn(
-                                                            "absolute -left-[33px] top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full text-white ring-4 ring-card",
+                                                            "absolute -left-[35px] top-4 flex h-5 w-5 items-center justify-center rounded-full text-white ring-4 ring-card",
                                                             c.node,
                                                         )}
                                                     >
@@ -418,38 +358,18 @@ const ActivityTab = ({ projectId }: ActivityTabProps) => {
 
                                                     {/* Row */}
                                                     <div
+                                                        role={canOpen ? "link" : undefined}
+                                                        tabIndex={canOpen ? 0 : undefined}
+                                                        title={canOpen ? "Open" : undefined}
+                                                        onClick={canOpen ? () => openActivity(activity) : undefined}
+                                                        onKeyDown={canOpen ? (e) => { if (e.key === "Enter" && e.target === e.currentTarget) openActivity(activity); } : undefined}
                                                         className={cn(
-                                                            "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border border-l-[3px] bg-card px-3 py-2 transition-colors hover:bg-muted/40",
+                                                            "rounded-lg border border-border border-l-[3px] bg-card px-3 py-2.5 transition-colors hover:bg-muted/40",
+                                                            canOpen && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
                                                             c.bar,
                                                         )}
                                                     >
-                                                        <span className={cn("inline-flex shrink-0 items-center rounded px-1.5 py-px text-[10px] font-bold uppercase tracking-wide", c.soft)}>
-                                                            {activity.activityType.replace(/_/g, " ")}
-                                                        </span>
-
-                                                        <p className="min-w-0 flex-1 basis-40 truncate text-[13px] font-semibold text-foreground" title={content.title}>
-                                                            {content.title}
-                                                            {content.subtitle && (
-                                                                <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">
-                                                                    {content.subtitle}
-                                                                </span>
-                                                            )}
-                                                        </p>
-
-                                                        <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
-                                                            <span
-                                                                className={cn(
-                                                                    "grid h-5 w-5 place-items-center rounded-full text-[9px] font-bold text-white",
-                                                                    avatarColor(content.actor),
-                                                                )}
-                                                            >
-                                                                {initials(content.actor)}
-                                                            </span>
-                                                            <span className="max-w-[110px] truncate font-medium text-foreground/80">{content.actor}</span>
-                                                            <span aria-hidden>·</span>
-                                                            <Clock className="h-3 w-3" />
-                                                            {timeOf(activity.createdAt)}
-                                                        </span>
+                                                        <ActivityCardBody activity={activity} badgeClass={c.soft} names={names} />
                                                     </div>
                                                 </li>
                                             );

@@ -1,9 +1,9 @@
 // TaskTableHeader.tsx
 import React from 'react';
 import { ChevronsDown, ChevronsUp, Plus } from 'lucide-react';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { showWarning } from '@/lib/errorAlert';
 
 interface StatItem {
   label: string;
@@ -68,7 +68,7 @@ export function TaskTableHeader({
           className="h-7 text-xs gap-1 bg-primary/60"
           onClick={() => {
             if (!hasLists) {
-              toast.error('Create a task list first');
+              showWarning('Create a task list first');
               return;
             }
             onSimpleAddTask(firstListId, null);

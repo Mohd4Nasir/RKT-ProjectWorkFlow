@@ -24,6 +24,10 @@ interface AddMemberDialogProps {
   onAddMember: (userId: string, role: string) => void;
 }
 
+/** role pre-selected in the dialog (falls back to the first role the API returns) */
+const defaultRole = (roles: string[]) =>
+  roles.find((r) => r.toUpperCase().includes('CONTRIBUTOR')) ?? roles[0] ?? '';
+
 export function AddMemberDialog({ 
   open, 
   onOpenChange, 
@@ -38,7 +42,7 @@ export function AddMemberDialog({
   // Set default role when roles change
   useEffect(() => {
     if (roles.length && !memberRole) {
-      setMemberRole(roles[0]);
+      setMemberRole(defaultRole(roles));
     }
   }, [roles, memberRole]);
 
@@ -58,7 +62,7 @@ export function AddMemberDialog({
   const resetForm = useCallback(() => {
     setSelectedUserId(null);
     setSearchTerm('');
-    setMemberRole(roles[0] || '');
+    setMemberRole(defaultRole(roles));
   }, [roles]);
 
   // Handle add member

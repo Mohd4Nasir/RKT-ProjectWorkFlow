@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Bell, Search, LogOut, Moon, Sun, Settings, User as UserIcon, Menu } from 'lucide-react';
+import { Bell, Search, LogOut, Moon, Sun, Settings, User as UserIcon, Menu, KeyRound } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { logout } from '@/store/slices/authSlice';
 import { setMobileNav, setTheme, toggleSidebar } from '@/store/slices/uiSlice';
@@ -17,7 +17,7 @@ import { relativeTime } from '@/utils/format';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { performLogout } from '@/services/keycloakService';
+import { performLogout, goToChangePassword } from '@/services/keycloakService';
 
 export function Header() {
   const dispatch = useAppDispatch();
@@ -190,6 +190,7 @@ export function Header() {
             <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate('/profile')}><UserIcon className="h-4 w-4 mr-2" />Profile</DropdownMenuItem>
+            <DropdownMenuItem onClick={goToChangePassword}><KeyRound className="h-4 w-4 mr-2" />Manage Account </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/settings')}><Settings className="h-4 w-4 mr-2" />Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-danger focus:text-danger"><LogOut className="h-4 w-4 mr-2" />Log out</DropdownMenuItem>

@@ -14,6 +14,7 @@ import { getParsedToken } from '@/services/keycloakService';
 import { taskService, TaskComment, CommentLikeType } from '@/services/taskservice';
 import { CommentEditor, CommentHtml } from './CommentEditor';
 import { CommentAttachments, uploadCommentFiles } from './CommentAttachments';
+import { showError, showWarning } from '@/lib/errorAlert';
 
 /** Comments, replies and likes all come from the task-comment-controller API. */
 
@@ -216,8 +217,9 @@ export function CommentsTab({ taskId, onCount }: { taskId: number; onCount: (n: 
       const grouped: Record<number, TaskComment[]> = {};
       list.filter((c) => c.parentCommentId).forEach((c) => { (grouped[c.parentCommentId!] ||= []).push(c); });
       setReplies(grouped);
-    } catch {
+    } catch (err) {
       setError(true);
+      showError(err, 'Failed to load comments');
     } finally {
       setLoading(false);
     }
@@ -261,16 +263,16 @@ export function CommentsTab({ taskId, onCount }: { taskId: number; onCount: (n: 
     try {
       if (next) await taskService.likeTaskComment(c.id, next);
       else await taskService.unlikeTaskComment(c.id);
-    } catch {
+    } catch (err) {
       patch(c.id, () => c); // roll back to what we had
-      toast.error('Could not update your reaction');
+      showError(err, 'Could not update your reaction');
     }
   };
 
   /** upload picked files against a saved comment, then refresh that comment's attachment list */
   const attach = async (commentId: number | undefined, files: File[]) => {
     if (!files.length) return;
-    if (!commentId) { toast.error('Comment saved, but the files could not be attached'); return; }
+    if (!commentId) { showWarning('Comment saved, but the files could not be attached'); return; }
     const n = await uploadCommentFiles(commentId, files);
     if (n) {
       toast.success(`${n} file${n > 1 ? 's' : ''} attached`);
@@ -285,8 +287,8 @@ export function CommentsTab({ taskId, onCount }: { taskId: number; onCount: (n: 
       await attach(created?.id, files);
       setAll((l) => [created ?? { id: Date.now(), taskId, authorId: 0, authorName: me(), content, commentUpdatedOn: new Date().toISOString() }, ...l]);
       return true;
-    } catch {
-      toast.error('Failed to post comment');
+    } catch (err) {
+      showError(err, 'Failed to post comment');
       return false;
     } finally {
       setPosting(false);
@@ -308,8 +310,8 @@ export function CommentsTab({ taskId, onCount }: { taskId: number; onCount: (n: 
       setReplyingTo(null);
       setExpanded((s) => new Set(s).add(parent.id));
       return true;
-    } catch {
-      toast.error('Failed to post reply');
+    } catch (err) {
+      showError(err, 'Failed to post reply');
       return false;
     } finally {
       setReplyBusy(false);
@@ -322,8 +324,8 @@ export function CommentsTab({ taskId, onCount }: { taskId: number; onCount: (n: 
       patch(c.id, (x) => ({ ...x, ...(updated ?? {}), content, commentUpdatedOn: updated?.commentUpdatedOn ?? new Date().toISOString() }));
       toast.success('Comment updated');
       return true;
-    } catch {
-      toast.error('Failed to update comment');
+    } catch (err) {
+      showError(err, 'Failed to update comment');
       return false;
     }
   };
@@ -342,8 +344,8 @@ export function CommentsTab({ taskId, onCount }: { taskId: number; onCount: (n: 
       } else {
         setAll((l) => l.filter((x) => x.id !== c.id));
       }
-    } catch {
-      toast.error('Failed to delete comment');
+    } catch (err) {
+      showError(err, 'Failed to delete comment');
     } finally {
       setRemoving(null);
     }
@@ -361,8 +363,8 @@ export function CommentsTab({ taskId, onCount }: { taskId: number; onCount: (n: 
     try {
       const list = await taskService.getTaskCommentReplies(c.id);
       setReplies((m) => ({ ...m, [c.id]: list.map((r) => ({ ...r, parentCommentId: c.id })) }));
-    } catch {
-      toast.error('Could not load replies');
+    } catch (err) {
+      showError(err, 'Could not load replies');
       setExpanded((s) => { const n = new Set(s); n.delete(c.id); return n; });
     } finally {
       setLoadingReplies((s) => { const n = new Set(s); n.delete(c.id); return n; });

@@ -519,3 +519,130 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Error popup (SweetAlert2): above every drawer / modal, and clickable while a dialog is open */
+.swal2-container {
+  z-index: 2000 !important;
+  pointer-events: auto !important;
+  --swal2-backdrop: hsl(224 45% 8% / 0.45);
+  --swal2-backdrop-transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
+}
+.swal2-container.swal2-backdrop-show {
+  backdrop-filter: blur(4px);
+}
+.swal2-container.swal2-backdrop-hide {
+  backdrop-filter: blur(0);
+}
+
+/* card */
+.swal2-popup.rkt-swal {
+  width: 25rem;
+  max-width: 100%;
+  padding: 1.75rem 1.5rem 1.5rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 1.25rem;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  box-shadow: 0 24px 60px -12px hsl(224 45% 8% / 0.35);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+.rkt-swal .swal2-title.rkt-swal-title {
+  padding: 1rem 0 0;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: hsl(var(--foreground));
+}
+.rkt-swal .swal2-html-container.rkt-swal-text {
+  margin: 0;
+  padding: 0.5rem 0.25rem 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: hsl(var(--muted-foreground));
+}
+
+/* icon: smaller, on a soft tinted circle */
+.rkt-swal .swal2-icon {
+  zoom: 0.8;
+  margin: 0 auto;
+}
+.rkt-swal .swal2-icon.swal2-error {
+  border-color: transparent;
+  background: hsl(var(--destructive) / 0.12);
+}
+.rkt-swal .swal2-icon.swal2-error [class^='swal2-x-mark-line'] {
+  background-color: hsl(var(--destructive));
+}
+.rkt-swal .swal2-icon.swal2-warning {
+  border-color: transparent;
+  background: hsl(38 92% 50% / 0.14);
+  color: hsl(32 95% 48%);
+}
+
+/* buttons */
+.rkt-swal .swal2-actions.rkt-swal-actions {
+  width: 100%;
+  margin: 1.5rem 0 0;
+  gap: 0.625rem;
+  flex-wrap: nowrap;
+}
+.rkt-swal-btn {
+  flex: 1 1 0;
+  max-width: 12rem;
+  padding: 0.65rem 1.25rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+.rkt-swal-btn:active {
+  transform: scale(0.97);
+}
+.rkt-swal-btn-primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+.rkt-swal-btn-primary:hover {
+  filter: brightness(1.08);
+}
+.rkt-swal-btn-secondary {
+  border-color: hsl(var(--border));
+  background: transparent;
+  color: hsl(var(--foreground));
+}
+.rkt-swal-btn-secondary:hover {
+  background: hsl(var(--muted));
+}
+
+/* soft entry and exit instead of the default sudden "pop" */
+.swal2-popup.rkt-swal-in {
+  animation: rkt-swal-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.swal2-popup.rkt-swal-out {
+  animation: rkt-swal-out 0.2s ease-in both;
+}
+@keyframes rkt-swal-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes rkt-swal-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(8px) scale(0.97); }
+}
+
+/* reduced motion: no movement, but keep a gentle fade so it still doesn't just appear */
+@media (prefers-reduced-motion: reduce) {
+  .swal2-popup.rkt-swal-in {
+    animation: rkt-swal-fade 0.25s ease both !important;
+  }
+  .swal2-container {
+    transition-duration: 0.25s !important;
+  }
+}
+@keyframes rkt-swal-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

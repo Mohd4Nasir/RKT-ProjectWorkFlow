@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, Eye, File as FileIcon, FileImage, FileSpreadsheet, FileText, Loader2, Paperclip, Trash2, X } from 'lucide-react';
-import { toast } from 'sonner';
-import { commentAttachmentApi, TaskCommentAttachment, ViewUrlData } from '@/services/fileApiService';
+import { commentAttachmentApi, CommentAttachmentApi, TaskCommentAttachment, ViewUrlData } from '@/services/fileApiService';
 import { FilePreview } from '@/components/FilePreview';
 import { downloadFromUrl } from '@/lib/downloadFile';
 import { fmtBytes } from './CommentEditor';
+import { showError } from '@/lib/errorAlert';
 
 /**
  * Files attached to one comment — task-comment-attachment-controller (object store, presigned URLs).
@@ -14,14 +14,14 @@ import { fmtBytes } from './CommentEditor';
  */
 
 /** upload the chosen files against a freshly created comment; resolves with how many succeeded */
-export async function uploadCommentFiles(commentId: number, files: File[]): Promise<number> {
+export async function uploadCommentFiles(commentId: number, files: File[], api: CommentAttachmentApi = commentAttachmentApi): Promise<number> {
   let ok = 0;
   for (const f of files) {
     try {
-      await commentAttachmentApi.upload(commentId, f);
+      await api.upload(commentId, f);
       ok++;
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || `Could not upload ${f.name}`);
+      showError(err, `Could not upload ${f.name}`);
     }
   }
   return ok;
@@ -38,14 +38,14 @@ const iconFor = (name: string) => {
 const isImage = (name: string) => /\.(png|jpe?g|gif|webp|svg)$/i.test(name);
 
 /** small preview for image attachments, loaded from a presigned view URL */
-function Thumb({ commentId, file, Icon }: { commentId: number; file: TaskCommentAttachment; Icon: typeof FileIcon }) {
+function Thumb({ commentId, file, Icon, api }: { commentId: number; file: TaskCommentAttachment; Icon: typeof FileIcon; api: CommentAttachmentApi }) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     if (!isImage(file.filename)) return;
     let live = true;
-    commentAttachmentApi.viewUrl(commentId, file.fileId).then((r) => live && setSrc(r.viewUrl)).catch(() => {});
+    api.viewUrl(commentId, file.fileId).then((r) => live && setSrc(r.viewUrl)).catch(() => {});
     return () => { live = false; };
-  }, [commentId, file.fileId, file.filename]);
+  }, [api, commentId, file.fileId, file.filename]);
   return (
     <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md bg-primary/10 text-primary">
       {src ? <img src={src} alt="" className="h-full w-full object-cover" onError={() => setSrc(null)} /> : <Icon className="h-4 w-4" />}
@@ -54,16 +54,18 @@ function Thumb({ commentId, file, Icon }: { commentId: number; file: TaskComment
 }
 
 export function CommentAttachments({
-  commentId, initial, version = 0,
-}: { commentId: number; initial?: TaskCommentAttachment[]; version?: number }) {
+  commentId, initial, version = 0, api = commentAttachmentApi,
+}: { commentId: number; initial?: TaskCommentAttachment[]; version?: number; api?: CommentAttachmentApi }) {
   const [files, setFiles] = useState<TaskCommentAttachment[]>(initial ?? []);
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      setFiles(await commentAttachmentApi.list(commentId));
-    } catch { /* keep what we have */ }
-  }, [commentId]);
+      setFiles(await api.list(commentId));
+    } catch (err) {
+      showError(err, 'Failed to load attachments'); // keep what we have
+    }
+  }, [api, commentId]);
 
   // optimistic placeholders use Date.now() as id — never ask the server about those
   const real = commentId < 1e12;
@@ -86,19 +88,19 @@ export function CommentAttachments({
     setBusy(f.fileId);
     try {
       if (download) {
-        const { downloadUrl, filename } = await commentAttachmentApi.downloadUrl(commentId, f.fileId);
+        const { downloadUrl, filename } = await api.downloadUrl(commentId, f.fileId);
         await downloadFromUrl(downloadUrl, filename || f.filename);
       } else {
         setPreview({ name: f.filename, data: null });
         try {
-          setPreview({ name: f.filename, data: await commentAttachmentApi.viewUrl(commentId, f.fileId) });
+          setPreview({ name: f.filename, data: await api.viewUrl(commentId, f.fileId) });
         } catch (e) {
           setPreview(null);
           throw e;
         }
       }
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || 'Could not open file');
+      showError(err, 'Could not open file');
     } finally {
       setBusy(null);
     }
@@ -108,10 +110,10 @@ export function CommentAttachments({
     if (!window.confirm(`Delete "${f.filename}"?`)) return;
     setBusy(f.fileId);
     try {
-      await commentAttachmentApi.remove(commentId, f.fileId);
+      await api.remove(commentId, f.fileId);
       setFiles((l) => l.filter((x) => x.fileId !== f.fileId));
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || 'Could not delete file');
+      showError(err, 'Could not delete file');
     } finally {
       setBusy(null);
     }
@@ -154,7 +156,7 @@ export function CommentAttachments({
           return (
             <li key={f.fileId} className="group/file flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5">
               <button type="button" onClick={() => open(f, false)} title="Preview" className="flex min-w-0 flex-1 items-center gap-2 text-left">
-                <Thumb commentId={commentId} file={f} Icon={Icon} />
+                <Thumb commentId={commentId} file={f} Icon={Icon} api={api} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-xs font-semibold" title={f.filename}>{f.filename}</div>
                   <div className="text-[10px] text-muted-foreground">{fmtBytes(f.fileSize)}</div>

@@ -7,7 +7,25 @@ export const PROJECT_STATUS_UI: Record<string, { label: string; dot: string; bad
   DELAYED: { label: 'Delayed', dot: 'bg-red-500', badge: 'bg-red-50 text-red-800 border-red-300' },
   COMPLETED: { label: 'Completed', dot: 'bg-violet-500', badge: 'bg-violet-50 text-violet-800 border-violet-300' },
   CLOSED: { label: 'Closed', dot: 'bg-zinc-500', badge: 'bg-zinc-100 text-zinc-700 border-zinc-200' },
+  ACTIVE: { label: 'Active', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-800 border-emerald-300' },
+  ON_TRACK: { label: 'On Track', dot: 'bg-teal-500', badge: 'bg-teal-50 text-teal-800 border-teal-300' },
+  IN_TESTING: { label: 'In Testing', dot: 'bg-cyan-500', badge: 'bg-cyan-50 text-cyan-800 border-cyan-300' },
+  APPROVED: { label: 'Approved', dot: 'bg-lime-500', badge: 'bg-lime-50 text-lime-800 border-lime-300' },
+  CANCELLED: { label: 'Cancelled', dot: 'bg-rose-500', badge: 'bg-rose-50 text-rose-800 border-rose-300' },
+  PLANNING: { label: 'Planning', dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-800 border-amber-300' },
+  INVOICED: { label: 'Invoiced', dot: 'bg-indigo-500', badge: 'bg-indigo-50 text-indigo-800 border-indigo-300' },
 };
+
+/** Statuses the backend supports — used by the filter and the status dropdown. */
+export const PROJECT_STATUS_VALUES = [
+  'ACTIVE', 'IN_PROGRESS', 'ON_TRACK', 'DELAYED', 'IN_TESTING', 'ON_HOLD',
+  'APPROVED', 'CANCELLED', 'PLANNING', 'COMPLETED', 'INVOICED',
+] as const;
+
+export const PROJECT_STATUS_OPTIONS = PROJECT_STATUS_VALUES.map((v) => ({ label: PROJECT_STATUS_UI[v].label, value: v }));
+
+/** Statuses after which a project can no longer be "overdue". */
+export const FINISHED_PROJECT_STATUSES = ['COMPLETED', 'CLOSED', 'CANCELLED', 'INVOICED'];
 
 export function statusUi(status?: string) {
   return (
@@ -25,7 +43,7 @@ export function projectProgress(p: Pick<Project, 'totalTask' | 'completedTask'>)
 }
 
 export function isProjectOverdue(p: Pick<Project, 'endDate' | 'projectStatus'>): boolean {
-  if (!p.endDate || p.projectStatus === 'COMPLETED' || p.projectStatus === 'CLOSED') return false;
+  if (!p.endDate || FINISHED_PROJECT_STATUSES.includes(p.projectStatus)) return false;
   const end = new Date(p.endDate);
   end.setHours(23, 59, 59, 999);
   return end.getTime() < Date.now();

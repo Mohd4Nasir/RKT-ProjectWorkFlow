@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, ChevronDown, ChevronRight, Circle, ListTodo, PanelLeftClose, Search } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, Circle, ListTodo, PanelLeftClose, Search } from 'lucide-react';
 import { useAppSelector } from '@/store';
 import { SubTaskNode } from '@/types/taskTypes';
 import { cn } from '@/lib/utils';
@@ -15,7 +15,7 @@ interface Props {
 /** ids of every ancestor of `target`, so its branch opens automatically */
 function pathTo(nodes: SubTaskNode[], target: number, trail: number[] = []): number[] | null {
   for (const n of nodes) {
-    if (n.taskId === target) return trail;
+    if (Number(n.taskId) === Number(target)) return trail;
     const hit = n.subTask?.length ? pathTo(n.subTask, target, [...trail, n.taskId]) : null;
     if (hit) return hit;
   }
@@ -30,6 +30,10 @@ function filterTree(nodes: SubTaskNode[], q: string): SubTaskNode[] {
   });
 }
 
+/** true when `target` is somewhere below `node` */
+const holds = (node: SubTaskNode, target: number): boolean =>
+  !!node.subTask?.some((k) => Number(k.taskId) === Number(target) || holds(k, target));
+
 function Row({
   node, depth, selectedId, open, toggle, onSelect, forceOpen,
 }: {
@@ -38,14 +42,26 @@ function Row({
 }) {
   const kids = node.subTask ?? [];
   const isOpen = forceOpen || open.has(node.taskId);
-  const active = node.taskId === selectedId;
+  const active = Number(node.taskId) === Number(selectedId);
   const done = isTaskDone(node.taskStatus);
+  // a parent of the open task gets a lighter marker so the whole path is visible
+  const parentOfActive = !active && holds(node, selectedId);
+  const ref = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (active) ref.current?.scrollIntoView({ block: 'nearest' });
+  }, [active]);
   return (
     <>
       <li
+        ref={ref}
+        aria-current={active ? 'true' : undefined}
         className={cn(
-          'group flex items-center gap-1 pr-2 border-l-2 transition-colors',
-          active ? 'border-primary bg-gradient-to-r from-primary/20 to-transparent' : 'border-transparent hover:bg-primary/[0.06]',
+          'group flex items-center gap-1 pr-2 border-l-[3px] transition-colors',
+          active
+            ? 'border-primary bg-primary/15 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.3)]'
+            : parentOfActive
+              ? 'border-primary/40 bg-primary/[0.05] hover:bg-primary/[0.09]'
+              : 'border-transparent hover:bg-primary/[0.06]',
         )}
         style={{ paddingLeft: 6 + depth * 14 }}
       >
@@ -67,15 +83,21 @@ function Row({
         >
           {done
             ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
-            : <Circle className={cn("h-3.5 w-3.5 shrink-0", active ? "text-primary" : "text-info/60")} />}
+            : <Circle className={cn("h-3.5 w-3.5 shrink-0", active ? "text-primary fill-primary/30" : "text-info/60")} />}
           <span className={cn(
             'truncate text-[13px]',
-            active ? 'font-semibold text-primary' : 'text-foreground',
-            done && 'line-through text-muted-foreground',
+            active ? 'font-bold text-primary' : parentOfActive ? 'font-semibold text-foreground' : 'text-foreground',
+            done && (active ? 'line-through' : 'line-through text-muted-foreground'),
           )}>
             {node.taskTitle}
           </span>
         </button>
+        {(node.openIssueCount ?? 0) > 0 && (
+          <span title={`${node.openIssueCount} open issue(s)`}
+            className="inline-flex items-center gap-0.5 rounded-full bg-rose-500/15 px-1.5 text-[10px] font-semibold tabular-nums text-rose-600">
+            <AlertCircle className="h-2.5 w-2.5" />{node.openIssueCount}
+          </span>
+        )}
         {kids.length > 0 && (
           <span className="rounded-full bg-info/15 px-1.5 text-[10px] font-semibold tabular-nums text-info">{kids.length}</span>
         )}
@@ -100,8 +122,8 @@ export function TaskListRail({ taskId, listId, onSelect, onCollapse }: Props) {
 
   const list = useMemo(
     () =>
-      lists.find((l) => l.listId === picked) ??
-      lists.find((l) => l.listId === listId) ??
+      lists.find((l) => Number(l.listId) === picked) ??
+      lists.find((l) => Number(l.listId) === Number(listId)) ??
       lists.find((l) => pathTo(l.tasks, taskId)),
     [lists, listId, taskId, picked],
   );

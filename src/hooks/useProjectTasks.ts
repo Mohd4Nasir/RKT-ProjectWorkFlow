@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { projectApiService } from '@/services/projectsApiService';
 import { SubTaskNode, TaskListNode } from '@/types/taskTypes';
+import { showError } from '@/lib/errorAlert';
 
 export interface FlatTask extends SubTaskNode {
   listId: number;
@@ -53,8 +54,9 @@ export function useProjectTasks(projectId: string | number) {
     try {
       const res = await projectApiService.getProjectById(String(projectId));
       setLists(res?.data?.lists ?? []);
-    } catch {
+    } catch (err) {
       setError(true);
+      showError(err, 'Failed to load tasks');
     } finally {
       setLoading(false);
     }

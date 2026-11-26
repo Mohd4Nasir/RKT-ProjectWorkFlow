@@ -1,3 +1,4 @@
+import type { TaskActivityPage } from "@/utils/activity";
 import { Project, ProjectsResponse } from "@/types/ProejctsType";
 import axiosInstance from "./axiosInstance";
 import { apiService } from "./apiService";
@@ -177,20 +178,7 @@ addProjectMember: async ({ projectId, userId, projectRole }: AddProjectMemberPar
       params: { projectId, userId, projectRole }
     });
 
-    // Rethrow with user-friendly message
-    if (error.response?.data?.message) {
-      throw new Error(error.response.data.message);
-    } else if (error.response?.status === 404) {
-      throw new Error('Project or user not found');
-    } else if (error.response?.status === 403) {
-      throw new Error('You do not have permission to add members to this project');
-    } else if (error.response?.status === 409) {
-      throw new Error('User is already a member of this project');
-    } else if (error.code === 'ECONNABORTED') {
-      throw new Error('Request timed out. Please try again.');
-    } else {
-      throw new Error(error.message || 'Failed to add member to project');
-    }
+    throw error; // showError() reads the status and server message
   }
 },
 
@@ -329,5 +317,16 @@ addProjectMember: async ({ projectId, userId, projectRole }: AddProjectMemberPar
       console.error(`Get activity tracker for project ${projectId} error:`, error);
       throw error;
     }
-  }
+  },
+
+  // GET /activities/task/{taskId}?category=&page=&size=  → { content, page, size, totalElements, totalPages, hasNext }
+  taskActivities: async (
+    taskId: number | string,
+    opts: { category?: 'TASK' | 'COMMENT' | 'ISSUE' | 'ATTACHMENT' | 'WORKLOG'; page?: number; size?: number } = {},
+  ): Promise<TaskActivityPage> => {
+    const response = await axiosInstance.get(`/activities/task/${taskId}`, {
+      params: { category: opts.category, page: opts.page ?? 0, size: opts.size ?? 20 },
+    });
+    return response.data?.data;
+  },
 };

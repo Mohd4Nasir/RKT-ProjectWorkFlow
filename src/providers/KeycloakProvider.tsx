@@ -128,9 +128,9 @@ export const KeycloakProvider: React.FC<{ children: React.ReactNode }> = ({
               }
             } catch (err) {
               // Don't force the user out of the app - show a message instead.
-              // They can choose "Log in again" from the toast (or the normal Logout).
+              // They can choose "Log in again" from the popup (or the normal Logout).
               console.error("Token Refresh Failed", err);
-              notifySessionExpired();
+              notifySessionExpired({ background: true });
             }
           }, 25000);
         }

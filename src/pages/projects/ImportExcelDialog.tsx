@@ -8,6 +8,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { ExcelImportReport, projectApiService } from '@/services/projectsApiService';
+import { showError } from '@/lib/errorAlert';
 
 interface Props {
   open: boolean;
@@ -41,15 +42,14 @@ export function ImportExcelDialog({ open, onOpenChange, onImported }: Props) {
     try {
       const res = await projectApiService.importFromExcel(file, { skipExisting, mapUsersByName });
       if (res.success === false) {
-        toast.error(res.message || 'Import failed');
+        showError(res.message, 'Import failed');
         return;
       }
       setReport(res.data ?? null);
       toast.success(res.message || 'Excel imported');
       onImported?.();
-    } catch (error: unknown) {
-      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg || 'Failed to import Excel');
+    } catch (error) {
+      showError(error, 'Failed to import Excel');
     } finally {
       setLoading(false);
     }

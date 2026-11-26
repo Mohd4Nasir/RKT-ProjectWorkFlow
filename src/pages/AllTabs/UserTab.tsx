@@ -21,6 +21,7 @@ import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { showError, showWarning } from '@/lib/errorAlert';
 
 type ViewMode = 'table' | 'cards';
 
@@ -64,7 +65,7 @@ export function UsersTab({ project }: { project: Project }) {
       console.log(response.data)
       setExistingMembers(response.data);
     }  catch (error) {
-      toast.error("Failed to load existing project members");
+      showError(error, "Failed to load existing project members");
     }
   };
 
@@ -78,7 +79,7 @@ export function UsersTab({ project }: { project: Project }) {
       // Update the project members in the store if needed
   }  catch (error) { 
 
-      toast.error("Failed to load project members");
+      showError(error, "Failed to load project members");
     } 
   }
    
@@ -93,7 +94,7 @@ export function UsersTab({ project }: { project: Project }) {
       console.log(response.data)
       setRoles(response.data);
     } catch (error) {
-      toast.error("Failed to load roles");
+      showError(error, "Failed to load roles");
     } finally {
       setLoadingRoles(false);
     }
@@ -108,7 +109,7 @@ export function UsersTab({ project }: { project: Project }) {
   const handleAddMember = async (userId: number | string, role: string) => {
     console.log("Adding member:", userId, "with role:", role);
     if (!userId || !role) {
-      toast.error('Please select a user and role');
+      showWarning('Please select a user and role');
       return;
     }
     try {
@@ -117,13 +118,16 @@ export function UsersTab({ project }: { project: Project }) {
       : project.id;
        await projectApiService.addProjectMember({ projectId, userId, projectRole: role });
       dispatch(addProjectMember({ projectId, userId, role }));
+      // reload from the server so the team list and the "available users" list update right away
+      fetchExistingMembersInProject();
+      fetchMembers();
       toast.success('Member added');
       setAddMemberOpen(false);
-    } catch { toast.error('Failed to add member'); }
+    } catch (err) { showError(err, 'Failed to add member'); }
   };
 
   const handleRemoveMember = (user: any) => {
-    if (user.id === project.ownerId) { toast.error('Cannot remove the project owner'); return; }
+    if (user.id === project.ownerId) { showWarning('Cannot remove the project owner'); return; }
     setUserToRemove(user);
     setDeleteConfirmOpen(true);
   };
@@ -138,7 +142,7 @@ export function UsersTab({ project }: { project: Project }) {
       toast.success(`${userToRemove.name} removed`);
       setDeleteConfirmOpen(false);
       setUserToRemove(null);
-    } catch { toast.error('Failed to remove member'); }
+    } catch (err) { showError(err, 'Failed to remove member'); }
   };
 
   const handleChangeRole = async (userId: string, role: string) => {
@@ -146,7 +150,7 @@ export function UsersTab({ project }: { project: Project }) {
       await projectApiService.updateMemberRole(project.id, userId, role);
       fetchExistingMembersInProject();
       toast.success('Role updated');
-    } catch { toast.error('Failed to update role'); }
+    } catch (err) { showError(err, 'Failed to update role'); }
   };
 
   const visibleMembers = ExistingMembers.filter(u => {

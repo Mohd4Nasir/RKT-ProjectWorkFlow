@@ -1,32 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fileApiService, FileRecord, ViewUrlData } from '@/services/fileApiService';
+import { fileApiService, FileRecord, ViewUrlData, userLabel } from '@/services/fileApiService';
 import { FilePreview } from '@/components/FilePreview';
 import { Button }   from '@/components/ui/button';
 import { Input }    from '@/components/ui/input';
 import { toast }    from 'sonner';
-import { FileText, Upload, Search, Trash2, Download, Eye, X } from 'lucide-react';
+import { FileText, Upload, Search, Trash2, Download, Eye, X, Pencil } from 'lucide-react';
+import { EditDescriptionDialog, FileBadge, UploadDialog, formatSize, type UploadItem } from '@/components/documents/docUi';
 import { format }   from 'date-fns';
 import { downloadFromUrl } from '@/lib/downloadFile';
+import { showError } from '@/lib/errorAlert';
 
 interface Doc {
   id: string; name: string; size: string;
   uploadedBy: string; uploadedAt: string; type: string;
+  description: string;
 }
-
-const formatSize = (bytes: number) => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
 
 const toDoc = (f: FileRecord): Doc => ({
   id: f.fileId,
   name: f.filename,
   size: formatSize(f.fileSize),
-  // API only returns the user id
-  uploadedBy: `User #${f.uploadedBy}`,
+  uploadedBy: userLabel(f.uploadedBy),
   uploadedAt: f.uploadedAt,
   type: f.filename.includes('.') ? f.filename.split('.').pop()! : f.contentType,
+  description: f.description ?? '',
 });
 
 interface Props {
@@ -43,8 +40,8 @@ export function OwnerDocuments({ ownerType, ownerId, subtitle = 'Files and attac
   const [previewName, setPreviewName] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [pending, setPending] = useState<File[] | null>(null);
+  const [editing, setEditing] = useState<Doc | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [docs, setDocs] = useState<Doc[]>([]);
@@ -54,7 +51,7 @@ export function OwnerDocuments({ ownerType, ownerId, subtitle = 'Files and attac
       const files = await fileApiService.listByOwner(ownerType, ownerId);
       setDocs(files.map(toDoc));
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to load documents');
+      showError(err, 'Failed to load documents');
     }
   }, [ownerType, ownerId]);
 
@@ -74,23 +71,34 @@ export function OwnerDocuments({ ownerType, ownerId, subtitle = 'Files and attac
 
   const handleUpload = () => fileInputRef.current?.click();
 
-  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     e.target.value = ''; // allow re-selecting the same file
-    if (!files.length) return;
+    if (files.length) setPending(files);
+  };
 
-    setUploading(true);
-    for (const file of files) {
-      setProgress(0);
+  const doUpload = async (items: UploadItem[], onProgress: (i: number, p: number) => void) => {
+    for (let i = 0; i < items.length; i++) {
+      const { file, description } = items[i];
       try {
-        await fileApiService.uploadFile(ownerType, ownerId, file, setProgress);
+        await fileApiService.uploadFile(ownerType, ownerId, file, (p) => onProgress(i, p), { description });
         toast.success(`${file.name} uploaded`);
-      } catch (err: any) {
-        toast.error(err?.response?.data?.message || err?.message || `Failed to upload ${file.name}`);
+      } catch (err) {
+        showError(err, `Failed to upload ${file.name}`);
       }
     }
-    setUploading(false);
     fetchDocs();
+  };
+
+  const saveDescription = async (doc: Doc, description: string) => {
+    try {
+      await fileApiService.updateFile(doc.id, { description });
+      setDocs((cur) => cur.map((d) => (d.id === doc.id ? { ...d, description } : d)));
+      toast.success('Description updated');
+    } catch (err) {
+      showError(err, 'Failed to update description');
+      throw err;
+    }
   };
 
   const handleView = async (doc: Doc) => {
@@ -102,7 +110,7 @@ export function OwnerDocuments({ ownerType, ownerId, subtitle = 'Files and attac
       setPreview(await fileApiService.getViewUrl(doc.id));
     } catch (err: any) {
       setPreviewOpen(false);
-      toast.error(err?.response?.data?.message || err?.message || 'Failed to open file');
+      showError(err, 'Failed to open file');
     } finally {
       setPreviewLoading(false);
     }
@@ -115,7 +123,7 @@ export function OwnerDocuments({ ownerType, ownerId, subtitle = 'Files and attac
       toast.success(`${doc.name} deleted`);
       fetchDocs();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || 'Failed to delete file');
+      showError(err, 'Failed to delete file');
     }
   };
 
@@ -124,7 +132,7 @@ export function OwnerDocuments({ ownerType, ownerId, subtitle = 'Files and attac
       const { downloadUrl, filename } = await fileApiService.getDownloadUrl(doc.id);
       await downloadFromUrl(downloadUrl, filename || doc.name);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || 'Failed to download file');
+      showError(err, 'Failed to download file');
     }
   };
 
@@ -137,8 +145,8 @@ export function OwnerDocuments({ ownerType, ownerId, subtitle = 'Files and attac
           <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
         </div>
         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFilesSelected} />
-        <Button onClick={handleUpload} size="sm" disabled={uploading}>
-          <Upload className="h-4 w-4 mr-2" /> {uploading ? `Uploading ${progress}%` : 'Upload'}
+        <Button onClick={handleUpload} size="sm">
+          <Upload className="h-4 w-4 mr-2" /> Upload
         </Button>
       </div>
 
@@ -173,9 +181,14 @@ export function OwnerDocuments({ ownerType, ownerId, subtitle = 'Files and attac
               {filtered.map(doc => (
                 <tr key={doc.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                      <span className="font-medium text-[13px]">{doc.name}</span>
+                    <div className="flex items-center gap-2.5">
+                      <FileBadge name={doc.name} />
+                      <div className="min-w-0">
+                        <span className="font-medium text-[13px] break-all">{doc.name}</span>
+                        {doc.description && (
+                          <p className="mt-0.5 max-w-md text-xs text-muted-foreground line-clamp-2" title={doc.description}>{doc.description}</p>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground uppercase">{doc.type}</td>
@@ -186,7 +199,10 @@ export function OwnerDocuments({ ownerType, ownerId, subtitle = 'Files and attac
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleView(doc)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit description" onClick={() => setEditing(doc)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Preview" onClick={() => handleView(doc)}>
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDownload(doc)}>
@@ -202,6 +218,18 @@ export function OwnerDocuments({ ownerType, ownerId, subtitle = 'Files and attac
             </tbody>
           </table>
         </div>
+      )}
+
+      {pending && (
+        <UploadDialog
+          initialFiles={pending}
+          destination={ownerType === 'TASK' ? 'this task' : ownerType === 'ISSUE' ? 'this issue' : undefined}
+          onClose={() => setPending(null)}
+          onUpload={doUpload}
+        />
+      )}
+      {editing && (
+        <EditDescriptionDialog name={editing.name} initial={editing.description} onClose={() => setEditing(null)} onSave={(d) => saveDescription(editing, d)} />
       )}
 
       {/* Preview dialog - own overlay (z-[300]) so it also shows above the task side panel (z-[101]) */}

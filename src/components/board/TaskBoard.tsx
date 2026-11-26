@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { CalendarDays, CornerDownRight, FolderKanban, ListTree } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/UserAvatar';
+import { IssueCountBadge } from '@/pages/task/IssueCountBadge';
 import {
   isOverdueDate, normStatus, priorityUi,
 } from '@/pages/task/taskUi';
@@ -20,6 +21,8 @@ export interface BoardTask {
   projectTitle?: string;
   subtaskTotal?: number;
   subtaskDone?: number;
+  /** issues of this task that are not CLOSED */
+  openIssueCount?: number | null;
   isSubtask?: boolean;
   assignee?: string;
 }
@@ -194,6 +197,7 @@ function Card({
             <ListTree className="h-3 w-3" /> {task.subtaskDone ?? 0}/{task.subtaskTotal}
           </span>
         )}
+        <IssueCountBadge count={task.openIssueCount} />
         {task.assignee && (
           <span className="ml-auto">
             <UserAvatar name={task.assignee} size="sm" />

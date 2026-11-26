@@ -8,6 +8,7 @@ import { SubTaskNode, TaskNode } from '@/types/taskTypes';
 import { Button } from '../../components/ui/button';
 import { useTaskStatuses } from './useTaskStatuses';
 import { priorityOf, priorityUi } from './taskUi';
+import { IssueCountBadge } from './IssueCountBadge';
 
 const STATUS_CFG: Record<string, { label: string; badge: string; dot: string }> = {
   TODO: { label: 'To Do', badge: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-500/20 dark:text-slate-200 dark:border-slate-500/40', dot: 'bg-slate-500' },
@@ -200,6 +201,12 @@ export function TaskRow({
               </span>
             )}
           </div>
+        </td>
+
+        <td className="py-1.5 px-3 text-center">
+          {(task.openIssueCount ?? 0) > 0
+            ? <IssueCountBadge count={task.openIssueCount} />
+            : <span className="text-xs text-muted-foreground/50">—</span>}
         </td>
 
         <td className="py-1.5 px-3">

@@ -9,7 +9,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
 import {
-  CalendarDays, Flag, AlertCircle, ClipboardList, Edit2, Trash2, MoreHorizontal,
+  CalendarDays, ClipboardList, Edit2, Trash2, MoreHorizontal,
 } from 'lucide-react';
 import {
   createColumnHelper, flexRender, getCoreRowModel,
@@ -18,8 +18,8 @@ import {
 import { Project, Users } from '@/types/ProejctsType';
 import { InlineEdit } from '@/components/cells/InlineEdit';
 import { DatePickerCell } from '@/components/cells/DatePickerCell';
-import { statusUi } from './projectUi';
-import { CountBar, PillEmpty } from './CountBar';
+import { statusUi, PROJECT_STATUS_VALUES } from './projectUi';
+import { CountBar } from './CountBar';
 import type { CSSProperties } from 'react';
 
 // first two columns stay pinned while scrolling horizontally
@@ -46,7 +46,7 @@ interface ProjectsTableProps {
   onChangeStatus?: (project: Project, status: string) => void;
 }
 
-const PROJECT_STATUSES = ['OPEN', 'ON_HOLD', 'COMPLETED', 'CLOSED'];
+const PROJECT_STATUSES: string[] = PROJECT_STATUS_VALUES as unknown as string[];
 
 type Owner = { ownerName: string; ownerId?: string | number };
 
@@ -183,7 +183,6 @@ function OwnersCell({ owners }: { owners: Owner[] }) {
 export function ProjectsTable({
   projects,
   users,
-  stats,
   onEdit,
   onDelete,
   onUpdate,
@@ -239,30 +238,6 @@ export function ProjectsTable({
           );
         },
         size: 270,
-      }),
-
-      columnHelper.accessor('progress', {
-        header: '%',
-        cell: ({ row }) => {
-          const p = row.original;
-          const pct = Math.min(100, Math.max(0, stats[p.projectId]?.pct ?? p.progress ?? 0));
-          return (
-            <div className="flex flex-col gap-1 w-full min-w-[70px]">
-              <span className="text-xs font-semibold text-heading">{pct}%</span>
-              <div className="h-1.5 w-full rounded-full bg-accent-55 overflow-hidden">
-                {/* Width is a runtime percentage, not a fixed design
-                    value, so it stays inline style — same reasoning as
-                    the ID color bar: Tailwind can't statically generate
-                    a class for a number that only exists at render time. */}
-                <div
-                  className="h-full rounded-full bg-accent transition-all"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            </div>
-          );
-        },
-        size: 110,
       }),
 
       columnHelper.accessor('projectStatus', {
@@ -323,38 +298,6 @@ export function ProjectsTable({
           />
         ),
         size: 200,
-      }),
-
-      columnHelper.display({
-        id: 'milestones',
-        header: () => (
-          <span className="inline-flex items-center gap-1.5">
-            <Flag className="h-3 w-3" /> Milestones
-          </span>
-        ),
-        cell: ({ row }) => {
-          const s = stats[row.original.projectId];
-          return s?.milestones > 0
-            ? <CountBar done={s.mDone} total={s.milestones} colorClass="bg-info" />
-            : <PillEmpty label="No Milestones" />;
-        },
-        size: 180,
-      }),
-
-      columnHelper.display({
-        id: 'issues',
-        header: () => (
-          <span className="inline-flex items-center gap-1.5">
-            <AlertCircle className="h-3 w-3" /> Issues
-          </span>
-        ),
-        cell: ({ row }) => {
-          const s = stats[row.original.projectId];
-          return s?.issues > 0
-            ? <CountBar done={Math.floor(s.issues / 2)} total={s.issues} colorClass="bg-danger" />
-            : <PillEmpty label="No Issues" />;
-        },
-        size: 160,
       }),
 
       columnHelper.accessor('startDate', {
@@ -430,7 +373,7 @@ export function ProjectsTable({
         size: 50,
       }),
     ],
-    [users, stats, onUpdate, onEdit, onDelete, onProjectClick, onChangeStatus],
+    [users, onUpdate, onEdit, onDelete, onProjectClick, onChangeStatus],
   );
 
   const table = useReactTable({

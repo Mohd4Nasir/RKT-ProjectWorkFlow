@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FolderPlus, Pencil, Trash2, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
+import { showError, showWarning } from '@/lib/errorAlert';
 
 // Define proper types
 interface TaskList {
@@ -72,7 +73,7 @@ const TaskListManager: React.FC<TaskListManagerProps> = ({
     e.preventDefault();
     
     if (!newListName.trim()) {
-      toast.error('List name is required');
+      showWarning('List name is required');
       return;
     }
 
@@ -93,7 +94,7 @@ const TaskListManager: React.FC<TaskListManagerProps> = ({
       setIsCreateDialogOpen(false);
     } catch (error) {
       console.error('Error creating task list:', error);
-      toast.error('Failed to create task list. Please try again.');
+      showError(error, 'Failed to create task list. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -111,7 +112,7 @@ const TaskListManager: React.FC<TaskListManagerProps> = ({
     e.preventDefault();
     
     if (!editListName.trim()) {
-      toast.error('List name is required');
+      showWarning('List name is required');
       return;
     }
 
@@ -130,7 +131,7 @@ const TaskListManager: React.FC<TaskListManagerProps> = ({
       setIsEditDialogOpen(false);
     } catch (error) {
       console.error('Error updating task list:', error);
-      toast.error('Failed to update task list.');
+      showError(error, 'Failed to update task list.');
     } finally {
       setIsLoading(false);
     }
@@ -155,7 +156,7 @@ const TaskListManager: React.FC<TaskListManagerProps> = ({
       setDeletingListName('');
     } catch (error) {
       console.error('Error deleting task list:', error);
-      toast.error('Failed to delete task list.');
+      showError(error, 'Failed to delete task list.');
     } finally {
       setIsLoading(false);
     }

@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { User } from '@/types/ProejctsType';
 import { toast } from 'sonner';
+import { showError } from '@/lib/errorAlert';
 
 interface DeleteUserProps {
   user: User;
@@ -30,7 +31,7 @@ export function DeleteUser({ user, trigger, onSuccess }: DeleteUserProps) {
       setOpen(false);
       if (onSuccess) onSuccess();
     } catch (error) {
-      toast.error('Failed to delete user');
+      showError(error, 'Failed to delete user');
     } finally {
       setIsDeleting(false);
     }

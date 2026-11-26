@@ -35,6 +35,7 @@ import {
 } from '@/store/slices/taskSlice';
 import { TaskListNode, TaskNode, SubTaskNode, CreateTaskListRequest, CreateTaskRequest } from '@/types/taskTypes';
 import { cn } from '@/lib/utils';
+import { showError, showWarning } from '@/lib/errorAlert';
 
 interface TasksTabProps {
     projectId: string;
@@ -105,6 +106,7 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
                     priority: priorityOf(t),
                     endDate: t.endDate,
                     listTitle: lists.find(l => l.listId === t.listId)?.listTitle,
+                    openIssueCount: t.openIssueCount,
                     subtaskTotal: kids.length,
                     subtaskDone: kids.filter(k => ['COMPLETED', 'CLOSED', 'DONE'].includes((k.taskStatus || '').toUpperCase())).length,
                     isSubtask: !!t.parentTaskId,
@@ -178,7 +180,7 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
         } catch (error) {
             console.error(error);
             toast.dismiss();
-            toast.error('Failed to load project');
+            showError(error, 'Failed to load project');
         } finally {
             dispatch(setLoading(false));
             setIsLoading(false);
@@ -200,7 +202,7 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
 
     const openCreateListAbove = (referenceListId: string): void => {
         const referenceList = lists.find(tl => String(tl.listId) === referenceListId);
-        if (!referenceList) { toast.error('Reference list not found'); return; }
+        if (!referenceList) { showWarning('Reference list not found'); return; }
         setListName('');
         setEditingList(null);
         setListPositionData({ referenceListId, isAbove: true, mode: 'position' });
@@ -209,7 +211,7 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
 
     const openCreateListBelow = (referenceListId: string): void => {
         const referenceList = lists.find(tl => String(tl.listId) === referenceListId);
-        if (!referenceList) { toast.error('Reference list not found'); return; }
+        if (!referenceList) { showWarning('Reference list not found'); return; }
         setListName('');
         setEditingList(null);
         setListPositionData({ referenceListId, isAbove: false, mode: 'position' });
@@ -263,7 +265,7 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
     };
 
     const saveTask = async (): Promise<void> => {
-        if (!taskForm.taskName.trim()) { toast.error('Enter a task name'); return; }
+        if (!taskForm.taskName.trim()) { showWarning('Enter a task name'); return; }
 
         if (editingTask) {
             try {
@@ -283,8 +285,8 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
                 toast.success('Task updated successfully');
                 setIsTaskModalOpen(false);
                 return;
-            } catch {
-                toast.error('Failed to update task');
+            } catch (err) {
+                showError(err, 'Failed to update task');
                 return;
             }
         }
@@ -304,9 +306,9 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
                 toast.dismiss(loadingToast);
                 toast.success(positionData.isAbove ? 'Task created above' : 'Task created below');
                 setIsTaskModalOpen(false);
-            } catch {
+            } catch (err) {
                 toast.dismiss(loadingToast);
-                toast.error('Failed to create task');
+                showError(err, 'Failed to create task');
             }
             return;
         }
@@ -327,14 +329,14 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
             toast.dismiss(loadingToast);
             toast.success(taskParentId ? 'Subtask created' : 'Task created');
             setIsTaskModalOpen(false);
-        } catch {
+        } catch (err) {
             toast.dismiss(loadingToast);
-            toast.error('Failed to create task');
+            showError(err, 'Failed to create task');
         }
     };
 
     const saveList = async (): Promise<void> => {
-        if (!listName.trim()) { toast.error('Enter a list name'); return; }
+        if (!listName.trim()) { showWarning('Enter a list name'); return; }
         const loadingToast = toast.loading(editingList ? 'Updating list...' : 'Creating list...');
 
         try {
@@ -353,7 +355,7 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
                 const referenceList = lists.find(tl => String(tl.listId) === listPositionData.referenceListId);
                 if (!referenceList) {
                     toast.dismiss(loadingToast);
-                    toast.error('Reference list not found');
+                    showWarning('Reference list not found');
                     return;
                 }
                 await taskService.createTaskListAtPosition({
@@ -380,11 +382,10 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
             toast.success(`✅ "${listName.trim()}" created successfully`);
             setIsListModalOpen(false);
             setListName('');
-        } catch (error: any) {
+        } catch (error) {
             toast.dismiss(loadingToast);
             console.error('Error saving list:', error);
-            const errorMessage = error?.response?.data?.message || error?.message || 'Failed to save list';
-            toast.error(`❌ ${errorMessage}`);
+            showError(error, 'Failed to save list');
         }
     };
 
@@ -422,9 +423,9 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
             await taskService.createTaskList({ projectId: data.projectId, listTitle: data.name });
             await fetchProjectWithTasks();
             toast.success('List created');
-        } catch {
-            toast.error('Failed to create list');
-            throw new Error();
+        } catch (err) {
+            showError(err, 'Failed to create list');
+            throw err;
         }
     };
 
@@ -433,9 +434,9 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
             await taskService.updateTaskList(projectId, taskList.listId, taskList.listTitle);
             dispatch(updateTaskList(taskList));
             toast.success('List updated');
-        } catch {
-            toast.error('Failed to update list');
-            throw new Error();
+        } catch (err) {
+            showError(err, 'Failed to update list');
+            throw err;
         }
     };
 
@@ -444,9 +445,9 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
             await taskService.deleteTaskList(listId);
             dispatch(deleteTaskList(listId));
             toast.success('List deleted');
-        } catch {
-            toast.error('Failed to delete list');
-            throw new Error();
+        } catch (err) {
+            showError(err, 'Failed to delete list');
+            throw err;
         }
     };
 
@@ -465,9 +466,9 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
             });
             await fetchProjectWithTasks();
             toast.success('Task created');
-        } catch {
-            toast.error('Failed to create task');
-            throw new Error();
+        } catch (err) {
+            showError(err, 'Failed to create task');
+            throw err;
         }
     };
 
@@ -493,9 +494,9 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
             }
             dispatch(updateTask(task));
             toast.success('Task updated');
-        } catch {
-            toast.error('Failed to update task');
-            throw new Error();
+        } catch (err) {
+            showError(err, 'Failed to update task'); // 409 = open issues block completion
+            throw err;
         }
     };
 
@@ -504,9 +505,9 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
             await taskService.deleteTask(taskId);
             dispatch(deleteTask(taskId));
             toast.success('Task deleted');
-        } catch {
-            toast.error('Failed to delete task');
-            throw new Error();
+        } catch (err) {
+            showError(err, 'Failed to delete task');
+            throw err;
         }
     };
 
@@ -532,9 +533,9 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
             }
             dispatch(reorderTaskLists({ projectId, orderedIds }));
             toast.success('Lists reordered');
-        } catch {
-            toast.error('Failed to reorder lists');
-            throw new Error();
+        } catch (err) {
+            showError(err, 'Failed to reorder lists');
+            throw err;
         }
     };
 
@@ -555,9 +556,9 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
             }
             dispatch(reorderTasks({ taskListId: listId, parentTaskId, orderedIds }));
             toast.success('Tasks reordered');
-        } catch {
-            toast.error('Failed to reorder tasks');
-            throw new Error();
+        } catch (err) {
+            showError(err, 'Failed to reorder tasks');
+            throw err;
         }
     };
 
@@ -571,6 +572,7 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
             }));
         } catch (error) {
             console.error(error);
+            showError(error, 'Failed to refresh tasks');
         }
     };
 
@@ -598,8 +600,8 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
             toast.success(p.targetParentTaskId ? 'Task moved' : 'Task moved to list', { id: t });
         } catch (error) {
             console.error(error);
-            const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            toast.error(msg || 'Failed to move task', { id: t });
+            toast.dismiss(t);
+            showError(error, 'Failed to move task');
         }
     };
 
@@ -638,6 +640,8 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
                 parentTaskId: d.parentTaskId ? String(d.parentTaskId) : null,
                 parentTaskTitle: d.parentTaskTitle || null,
                 createdBy: d.createdBy || '',
+                // GET /task/{id}/board -> issues of this task that are not CLOSED (null = 0)
+                openIssueCount: d.openIssueCount ?? 0,
                 comments: [],
                 subtasks: [],
                 subTask: [],
@@ -647,9 +651,9 @@ export function TasksTab({ projectId, project: projectProp }: TasksTabProps) {
 
             setSelectedTask(mappedTask);
             setTaskParam(d.taskId);
-        } catch {
+        } catch (err) {
             setTaskParam(null);
-            toast.error('Failed to load task details');
+            showError(err, 'Failed to load task details');
         } finally {
             setIsDetailLoading(false);
         }

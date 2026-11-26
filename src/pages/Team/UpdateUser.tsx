@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { User } from '@/types/ProejctsType';
 import { toast } from 'sonner';
+import { showError, showWarning } from '@/lib/errorAlert';
 
 interface UpdateUserProps {
   user: User;
@@ -52,7 +53,7 @@ export function UpdateUser({ user, trigger }: UpdateUserProps) {
     e.preventDefault();
     
     if (!form.name || !form.email) {
-      toast.error('Please fill in all required fields');
+      showWarning('Please fill in all required fields');
       return;
     }
 
@@ -65,7 +66,7 @@ export function UpdateUser({ user, trigger }: UpdateUserProps) {
       toast.success('User updated successfully!');
       setOpen(false);
     } catch (error) {
-      toast.error('Failed to update user');
+      showError(error, 'Failed to update user');
     } finally {
       setIsSubmitting(false);
     }

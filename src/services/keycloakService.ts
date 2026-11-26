@@ -169,6 +169,22 @@ export async function performLogout(redirectUri?: string): Promise<void> {
   });
 }
 
+/**
+ * Sends the user to Keycloak's Account Console to change their password.
+ * Passwords are never handled by this app. `referrer` / `referrer_uri`
+ * make the Account Console show a "Back to Project Tracker" link.
+ */
+export function goToChangePassword(): void {
+  const baseUrl = String(import.meta.env.VITE_KEYCLOAK_URL ?? '').replace(/\/+$/, '');
+  const realm = import.meta.env.VITE_KEYCLOAK_REALM;
+  const clientId = import.meta.env.VITE_KEYCLOAK_CLIENT_ID?.trim();
+  const params = new URLSearchParams({
+    referrer: clientId,
+    referrer_uri: window.location.origin,
+  });
+  window.location.assign(`${baseUrl}/realms/${realm}/account?${params.toString()}`);
+}
+
 // ─── User profile mapper ──────────────────────────────────────────────────────
 
 /**

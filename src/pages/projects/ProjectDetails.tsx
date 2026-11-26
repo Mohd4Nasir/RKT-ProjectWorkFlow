@@ -6,7 +6,6 @@ import { projectApiService } from '@/services/projectsApiService';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 import { format } from 'date-fns';
 import {
   BarChart3, CheckSquare, FileText, Flag,
@@ -25,6 +24,7 @@ import { TasksTab } from '../AllTabs/TaskTab';
 import { getProjectFromStorage, saveProjectToStorage } from '@/utils/projectStorage';
 import { Project } from '@/types/ProejctsType';
 import ActivityTab from '../AllTabs/ActivityTab';
+import { showError, showWarning } from '@/lib/errorAlert';
 
 type Tab = 'dashboard' | 'tasks' | 'reports' | 'documents' | 'milestones' | 'issues' | 'users' | 'activity';
 
@@ -100,6 +100,7 @@ export default function ProjectDetails() {
         console.log('3️⃣ From Redux:', foundProject ? '✅ Found' : '❌ Not found');
       }
       
+      let fetchFailed = false;
       // 4️⃣ Try: Agar Redux list empty hai toh fetch karo
       if (!foundProject && allProjects.length === 0) {
         console.log('📡 Fetching projects from API...');
@@ -117,6 +118,8 @@ export default function ProjectDetails() {
           console.log('4️⃣ After API fetch:', foundProject ? '✅ Found' : '❌ Not found');
         } catch (error) {
           console.error('❌ Failed to fetch projects:', error);
+          fetchFailed = true;
+          showError(error, 'Failed to load project');
         }
       }
       
@@ -127,7 +130,7 @@ export default function ProjectDetails() {
         setProject(foundProject);
       } else {
         console.error('❌ Project not found anywhere!');
-        toast.error('Project not found');
+        if (!fetchFailed) showWarning('Project not found');
       }
       
       setLoading(false);

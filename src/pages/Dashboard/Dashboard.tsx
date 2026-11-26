@@ -18,6 +18,7 @@ import { Project } from '@/types/ProejctsType';
 import {
   fmtDate, isProjectOverdue, projectProgress, statusUi,
 } from '@/pages/projects/projectUi';
+import { showError } from '@/lib/errorAlert';
 
 const STATUS_HEX: Record<string, string> = {
   OPEN: '#10b981',
@@ -66,8 +67,9 @@ export default function Dashboard() {
     setError(false);
     try {
       setProjects(await projectApiService.getProjects());
-    } catch {
+    } catch (err) {
       setError(true);
+      showError(err, 'Failed to load projects');
     } finally {
       setLoading(false);
     }

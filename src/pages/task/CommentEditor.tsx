@@ -3,9 +3,9 @@ import DOMPurify from 'dompurify';
 import {
   Bold, Code, File as FileIcon, ImagePlus, Italic, Link2, List, ListOrdered, Loader2, Paperclip, Quote, Smile, Strikethrough, Underline, X,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { showError, showWarning } from '@/lib/errorAlert';
 
 /**
  * Rich comment editor + renderer (Zoho / Jira style): formatting toolbar, emoji, links, and
@@ -168,12 +168,12 @@ export function CommentEditor({
     if (!allowFiles || !list.length) return;
     const ok: File[] = [];
     for (const f of list) {
-      if (f.size > MAX_FILE_MB * 1048576) toast.error(`${f.name} is larger than ${MAX_FILE_MB} MB`);
+      if (f.size > MAX_FILE_MB * 1048576) showWarning(`${f.name} is larger than ${MAX_FILE_MB} MB`);
       else ok.push(f);
     }
     setFiles((cur) => {
       const next = [...cur, ...ok.filter((f) => !cur.some((c) => c.name === f.name && c.size === f.size))];
-      if (next.length > MAX_FILES) toast.error(`You can attach up to ${MAX_FILES} files`);
+      if (next.length > MAX_FILES) showWarning(`You can attach up to ${MAX_FILES} files`);
       return next.slice(0, MAX_FILES);
     });
   };
@@ -219,11 +219,11 @@ export function CommentEditor({
     setUploading(true);
     try {
       for (const f of imgs) {
-        if (f.size > MAX_IMG_MB * 1048576) { toast.error(`${f.name || 'Image'} is larger than ${MAX_IMG_MB} MB`); continue; }
+        if (f.size > MAX_IMG_MB * 1048576) { showWarning(`${f.name || 'Image'} is larger than ${MAX_IMG_MB} MB`); continue; }
         exec('insertImage', await fileToDataUrl(f));
       }
-    } catch {
-      toast.error('Could not add the image');
+    } catch (err) {
+      showError(err, 'Could not add the image');
     } finally {
       setUploading(false);
     }
@@ -285,7 +285,7 @@ export function CommentEditor({
             onClick={() => {
               const url = window.prompt('Link URL', 'https://');
               if (url && /^(https?:\/\/|mailto:)/i.test(url)) exec('createLink', url);
-              else if (url) toast.error('Enter a valid http(s) link');
+              else if (url) showWarning('Enter a valid http(s) link');
             }}
           ><Link2 className="h-3.5 w-3.5" /></Tool>
           <Tool onClick={() => fileRef.current?.click()} title="Insert image (you can also paste or drop)"><ImagePlus className="h-3.5 w-3.5" /></Tool>

@@ -3,6 +3,7 @@ import { Plus, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { taskService } from '@/services/taskservice';
 import { T } from './Taskdetailshared';
+import { showError } from '@/lib/errorAlert';
 
 /**
  * Uses these taskService methods (see taskservice.ts):
@@ -127,6 +128,7 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
       if (latestTask.current === taskId) setMembers(res);
     } catch (err) {
       console.error(err);
+      showError(err, 'Failed to load contributors');
     } finally {
       setLoadingMembers(false);
     }
@@ -147,6 +149,7 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
         setRoles(res);
       } catch (err) {
         console.error(err);
+        showError(err, 'Failed to load roles');
       } finally {
         setLoadingRoles(false);
       }
@@ -165,6 +168,7 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
       setAssignableUsers(res);
     } catch (err) {
       console.error(err);
+      showError(err, 'Failed to load available users');
     } finally {
       setLoadingAssignable(false);
     }
@@ -179,6 +183,7 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
       setShowAddForm(false);
     } catch (err) {
       console.error(err);
+      showError(err, 'Failed to add contributor');
     } finally {
       setAdding(false);
     }
@@ -195,6 +200,7 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
       await taskService.assignTaskMember({ userId: member.userId, taskId, taskMemberRole: userTaskRole });
     } catch (err) {
       console.error(err);
+      showError(err, 'Failed to update role');
       // revert on failure
       setMembers((prev) =>
         prev.map((m) => (m.userId === member.userId ? { ...m, userTaskRole: previousRole } : m)),
@@ -301,55 +307,45 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
         </div>
       )}
 
-      <div className="p-4 flex-1">
+      <div className="p-2 flex-1">
         {loadingMembers && (
-          <div className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading...</div>
+          <div className="p-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading...</div>
         )}
 
         {!loadingMembers && members.length === 0 && (
-          <div className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No contributors assigned.</div>
+          <div className="p-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No contributors assigned.</div>
         )}
 
         {!loadingMembers && members.length > 0 && (
           // Caps at ~5 rows tall, then scrolls — so it stays usable as the team grows.
-          <div
-            className="overflow-hidden rounded-lg max-h-[320px] overflow-y-auto"
-            style={{ borderColor: `hsl(var(--border))` }}
-          >
+          <div className="max-h-[360px] overflow-y-auto">
             {members.map((member) => (
               <div
                 key={member.userId}
-                className="group grid grid-cols-[1fr_170px] items-center px-4 py-3 border-b last:border-b-0 transition-colors hover:bg-muted/50"
+                className="flex items-start gap-3 rounded-lg px-2 py-2.5 border-b last:border-b-0 transition-colors hover:bg-muted/50"
                 style={{ borderColor: `hsl(var(--border))` }}
               >
-                {/* User */}
-                <div className="flex items-center gap-3">
-                  <InitialsAvatar name={member.name} id={member.userId} />
+                <InitialsAvatar name={member.name} id={member.userId} />
 
-                  <div className="min-w-0">
-                    <p className="font-semibold truncate" style={{ color: 'hsl(var(--foreground))' }}>
-                      {member.name}
-                    </p>
-                    <p className="text-xs truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                      {member.email}
-                    </p>
-                  </div>
-                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-semibold leading-5" style={{ color: 'hsl(var(--foreground))' }} title={member.name}>
+                    {member.name}
+                  </p>
+                  <p className="truncate text-xs" style={{ color: 'hsl(var(--muted-foreground))' }} title={member.email}>
+                    {member.email}
+                  </p>
 
-                {/* Role: plain label by default, becomes the editable dropdown on row hover.
-                    The Select trigger stays mounted & fully laid out at all times so Radix
-                    can measure its position correctly — we just visually cover it with the
-                    label overlay and fade the overlay out on hover, instead of toggling
-                    display:none (which breaks Radix's popper positioning). */}
-                <div className="flex justify-end relative h-9 w-[180px]">
+                  {/* Role: compact dropdown, always visible */}
                   <Select
                     value={member.userTaskRole}
                     onValueChange={(role) => handleRoleChange(member, role)}
+                    disabled={updatingUserId === member.userId}
                   >
                     <SelectTrigger
-                      className="w-[180px] h-9 rounded-lg px-3 text-xs font-semibold border-0 shadow-none"
+                      aria-label={`Role of ${member.name}`}
+                      className="mt-1.5 h-7 w-auto max-w-full justify-start gap-1.5 rounded-full border-0 py-0 pl-2.5 pr-2 text-[11px] font-semibold shadow-none ring-offset-0 focus:ring-1 focus:ring-offset-0 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:shrink-0"
                       style={{
-                        backgroundColor: `hsl(var(--info) / 0.12)`,
+                        backgroundColor: `hsl(var(--info) / 0.14)`,
                         color: 'hsl(var(--foreground))',
                       }}
                     >
@@ -367,7 +363,7 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
                       }}
                       position="popper"
                       sideOffset={4}
-                      align="end"
+                      align="start"
                     >
                       <div className="py-1">
                         {roles.map((role) => (
@@ -403,17 +399,6 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
                       </div>
                     </SelectContent>
                   </Select>
-
-                  {/* Static label overlay — covers the trigger until the row is hovered,
-                      then fades out (and stops blocking clicks) so the real select is usable. */}
-                  <div
-                    className="absolute inset-0 flex items-center gap-2 px-3 rounded-lg pointer-events-none opacity-100 group-hover:opacity-0 transition-opacity"
-                    style={{ backgroundColor: `hsl(var(--info) / 0.12)`, color: 'hsl(var(--foreground))' }}
-                  >
-                    <span className="text-xs font-semibold truncate">
-                      {humanizeRole(member.userTaskRole || '')}
-                    </span>
-                  </div>
                 </div>
               </div>
             ))}

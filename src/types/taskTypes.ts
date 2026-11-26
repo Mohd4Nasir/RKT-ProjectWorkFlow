@@ -16,7 +16,9 @@ export interface SubTaskNode {
   /** @deprecated old name — read it through priorityOf() */
   priority?: string;
   parentTaskId?: number | null;
-  subTask?: SubTaskNode[]; 
+  /** issues of this task that are not CLOSED (treat null/undefined as 0) */
+  openIssueCount?: number | null;
+  subTask?: SubTaskNode[];
 }
 
 export interface TaskNode extends SubTaskNode {

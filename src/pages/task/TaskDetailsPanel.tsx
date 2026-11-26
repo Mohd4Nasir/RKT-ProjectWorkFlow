@@ -16,6 +16,7 @@ import { useTaskPriorities } from './useTaskPriorities';
 import { TaskContributors } from './Taskcontributors ';
 import { TaskPanelTabs } from './TaskPanelExtras';
 import { TaskListRail } from './TaskListRail';
+import { showError } from '@/lib/errorAlert';
 
 const FULLSCREEN_KEY = 'rkt.taskPanel.fullscreen';
 const RAIL_KEY = 'rkt.taskPanel.rail';
@@ -274,8 +275,9 @@ export const TaskDetailPanel = memo(function TaskDetailPanel({
       if (latestTask.current !== taskId) return; // user already moved to another task
       const raw = res?.data ?? res;
       setTree(Array.isArray(raw) ? raw[0] ?? null : raw?.taskId ? raw : null);
-    } catch {
+    } catch (err) {
       setTree(null);
+      showError(err, 'Failed to load subtasks');
     } finally {
       setLoadingTree(false);
     }
@@ -310,8 +312,8 @@ export const TaskDetailPanel = memo(function TaskDetailPanel({
       onChanged?.();
       toast.success('Saved');
       return true;
-    } catch {
-      toast.error('Failed to save changes');
+    } catch (err) {
+      showError(err, 'Failed to save changes');
       return false;
     } finally {
       setSaving(false);
@@ -324,8 +326,9 @@ export const TaskDetailPanel = memo(function TaskDetailPanel({
       onUpdate({ ...t, taskStatus: next });
       onChanged?.();
       toast.success(`Status: ${taskStatusUi(next).label}`);
-    } catch {
-      toast.error('Failed to update status');
+    } catch (err) {
+      // 409: "Task can't be marked Completed: N open issue(s) must be closed first"
+      showError(err, 'Failed to update status');
     }
   };
 
@@ -335,8 +338,8 @@ export const TaskDetailPanel = memo(function TaskDetailPanel({
       onUpdate({ ...t, taskPriority: next.toUpperCase(), priority: next.toUpperCase() });
       onChanged?.();
       toast.success(`Priority: ${priorityUi(next).label}`);
-    } catch {
-      toast.error('Failed to update priority');
+    } catch (err) {
+      showError(err, 'Failed to update priority');
     }
   };
 
@@ -357,8 +360,8 @@ export const TaskDetailPanel = memo(function TaskDetailPanel({
       onChanged?.();
       toast.success('Subtask created');
       subInput.current?.focus();
-    } catch {
-      toast.error('Failed to create subtask');
+    } catch (err) {
+      showError(err, 'Failed to create subtask');
     } finally {
       setCreating(false);
     }
@@ -599,7 +602,7 @@ export const TaskDetailPanel = memo(function TaskDetailPanel({
             </section>
 
             {/* Comments · Log hours · Documents · Issues · Activity */}
-            <TaskPanelTabs taskId={taskId} projectId={projectId} />
+            <TaskPanelTabs taskId={taskId} projectId={projectId} onTaskChanged={onChanged} openIssueCount={t.openIssueCount} />
           </main>
 
           {/* ═════════ DETAILS SIDEBAR ═════════ */}

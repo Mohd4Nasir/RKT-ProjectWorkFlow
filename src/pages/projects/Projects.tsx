@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { addProject, deleteProject, setProjects, updateProject } from '@/store/slices/projectsSlice';
 import { Project } from '@/types/ProejctsType';
@@ -10,17 +10,21 @@ import { ProjectsToolbar } from './ProjectsToolbar';
 import { ProjectsTable } from './ProjectsTable';
 import { ProjectsGrid } from './ProjectsGrid';
 import { ProjectEmptyState } from './ProjectEmptyState';
-import { ProjectPagination } from './ProjectPagination';
-import { ProjectSummaryCards } from './ProjectSummaryCards';
+import { ProjectSummaryCards, SummaryCardKey } from './ProjectSummaryCards';
 import { ProjectDialog } from './ProjectDialog';
 import { ImportExcelDialog } from './ImportExcelDialog';
 import { ProjectsFilterDrawer, FilterField } from './ProjectsFilterDrawer';
 import { ProjectStatsMap } from './ProjectStats';
 import { useFilterState, useProjectsFilter } from './hooks/useProjectsFilter';
 import { projectApiService } from '@/services/projectsApiService';
+import { PROJECT_STATUS_OPTIONS, FINISHED_PROJECT_STATUSES } from './projectUi';
 import { saveProjectToStorage } from '@/utils/projectStorage';
+import { showError } from '@/lib/errorAlert';
 
 interface Props { mine?: boolean; }
+
+/** the page opens on the Active projects; the "Total Projects" card shows everything */
+const DEFAULT_FILTERS = { match: 'all' as const, values: { status: 'ACTIVE' } };
 
 export default function Projects({ mine = false }: Props) {
   const basePath = mine ? '/my-projects' : '/projects';
@@ -35,22 +39,26 @@ export default function Projects({ mine = false }: Props) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  // infinite scroll: show 10, every time the end of the list is reached 10 more are added
+  const PAGE_STEP = 10;
+  const [visible, setVisible] = useState(PAGE_STEP);
   const [filterOpen, setFilterOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
-  const filters = useFilterState();
+  const filters = useFilterState(DEFAULT_FILTERS);
+
+  // clicking "Projects" in the sidebar while already here goes back to Active too
+  const { key: visitKey } = useLocation();
+  const setFilterValues = filters.setValues;
+  useEffect(() => { setFilterValues(DEFAULT_FILTERS); }, [visitKey, setFilterValues]);
 
   // const baseProjects = mine
   //   ? allProjects.filter((p) => p.members?.includes(String(me.id)))
   //   : allProjects;
 
     
-  const tabFiltered = useMemo(
-    () => allProjects.filter((p) => p.projectStatus !== 'COMPLETED'),
-    [allProjects],
-  );
+  // completed projects are shown too
+  const tabFiltered = allProjects;
 
   const userOptions = useMemo(() => {
     // owners actually present on projects (the global users list may not contain them)
@@ -59,14 +67,7 @@ export default function Projects({ mine = false }: Props) {
     return [...seen].map(([value, label]) => ({ label, value })).sort((x, y) => x.label.localeCompare(y.label));
   }, [allProjects]);
 
-  const statusOptions = [
-    { label: 'Open', value: 'OPEN' },
-    { label: 'In Progress', value: 'IN_PROGRESS' },
-    { label: 'On Hold', value: 'ON_HOLD' },
-    { label: 'Delayed', value: 'DELAYED' },
-    { label: 'Completed', value: 'COMPLETED' },
-    { label: 'Closed', value: 'CLOSED' },
-  ];
+  const statusOptions = PROJECT_STATUS_OPTIONS;
 
   const filterFields: FilterField[] = useMemo(() => [
     { id: 'name', label: 'Project Name', type: 'text' },
@@ -117,7 +118,7 @@ export default function Projects({ mine = false }: Props) {
       if (f.tasksMin || f.tasksMax) preds.push(inNum(p.totalTask ?? 0, f.tasksMin, f.tasksMax));
       if (f.overdue) {
         const late = !!p.endDate && day(p.endDate) < new Date().toISOString().slice(0, 10)
-          && !['COMPLETED', 'CLOSED'].includes(p.projectStatus);
+          && !FINISHED_PROJECT_STATUSES.includes(p.projectStatus);
         preds.push(f.overdue === 'yes' ? late : !late);
       }
       if (f.ownerCount) preds.push(f.ownerCount === 'has' ? (p.owners ?? []).length > 0 : (p.owners ?? []).length === 0);
@@ -134,7 +135,7 @@ export default function Projects({ mine = false }: Props) {
   }, [filters.values, filterFields]);
 
   // changing a filter or the search must not leave the user on a page that no longer exists
-  useEffect(() => { setPage(1); }, [query, filters.values]);
+  useEffect(() => { setVisible(PAGE_STEP); }, [query, filters.values]);
 
   const stats: ProjectStatsMap = useMemo(() => {
     const map: ProjectStatsMap = {};
@@ -154,6 +155,18 @@ export default function Projects({ mine = false }: Props) {
     }
     return map;
   }, [allProjects, allTasks]);
+
+  // which summary card matches the filters currently applied
+  const summarySelected: SummaryCardKey | undefined = (() => {
+    const v = filters.values.values;
+    const keys = Object.keys(v).filter((k) => v[k]);
+    if (keys.length === 0) return 'total';
+    if (keys.length !== 1) return undefined;
+    if (v.status === 'ACTIVE') return 'active';
+    if (v.status === 'COMPLETED') return 'completed';
+    if (v.overdue === 'yes') return 'overdue';
+    return undefined;
+  })();
 
   const loadProjects = async () => {
     try {
@@ -189,7 +202,7 @@ export default function Projects({ mine = false }: Props) {
       console.log('dispatch ke baad turant:', mappedProjects.length);
     } catch (error) {
       console.error(error);
-      toast.error('Failed to load projects');
+      showError(error, 'Failed to load projects');
     }
   };
 
@@ -204,7 +217,7 @@ console.log('filteredActive:', filteredActive.length);
       navigate(`${basePath}/${project?.projectId}`, { state: { project } });
     } catch (error) {
       console.error('Error fetching project:', error);
-      toast.error('Failed to load project');
+      showError(error, 'Failed to load project');
     }
   };
 
@@ -239,7 +252,7 @@ console.log('filteredActive:', filteredActive.length);
       setEditing(null);
     } catch (error) {
       console.error('Save error:', error);
-      toast.error('Failed to save project');
+      showError(error, 'Failed to save project');
     }
   };
 
@@ -257,14 +270,27 @@ console.log('filteredActive:', filteredActive.length);
       });
       dispatch(updateProject(p));
       toast.success('Project updated');
-    } catch {
-      toast.error('Failed to update project');
+    } catch (err) {
+      showError(err, 'Failed to update project');
       loadProjects(); // roll the table back to what the server has
     }
   };
 
-  const start = (page - 1) * pageSize;
-  const pageItems = filteredActive.slice(start, start + pageSize);
+  const pageItems = filteredActive.slice(0, visible);
+  const hasMore = visible < filteredActive.length;
+
+  // the marker below the list scrolls into view -> reveal the next 10
+  const sentinel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !hasMore) return;
+    const io = new IntersectionObserver(
+      (e) => { if (e[0].isIntersecting) setVisible((v) => v + PAGE_STEP); },
+      { rootMargin: '200px' },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, visible, view]);
 
   return (
     <div className="space-y-4">
@@ -273,7 +299,19 @@ console.log('filteredActive:', filteredActive.length);
         subtitle={mine ? 'Projects you own or contribute to' : 'All projects across the organisation'}
       />
 
-      <ProjectSummaryCards projects={tabFiltered} />
+      <ProjectSummaryCards
+        projects={tabFiltered}
+        selected={summarySelected}
+        onSelect={(key) => {
+          // clicking a card applies exactly that filter (Total clears everything)
+          if (key === 'total') { filters.reset(); return; }
+          const values: Record<string, string> =
+            key === 'active' ? { status: 'ACTIVE' }
+            : key === 'completed' ? { status: 'COMPLETED' }
+            : { overdue: 'yes' };
+          filters.setValues({ match: 'all', values });
+        }}
+      />
 
       <ProjectsToolbar
         query={query}
@@ -306,8 +344,8 @@ console.log('filteredActive:', filteredActive.length);
                 await projectApiService.updateProjectStatus(p.projectId, st);
                 dispatch(updateProject({ ...p, projectStatus: st } as Project));
                 toast.success('Status updated');
-              } catch {
-                toast.error('Failed to update status');
+              } catch (err) {
+                showError(err, 'Failed to update status');
               }
             }}
             onOpenTasks={(p) => navigate(`${basePath}/${p.id}`)}
@@ -324,13 +362,11 @@ console.log('filteredActive:', filteredActive.length);
           />
         )}
 
-        <ProjectPagination
-          total={filteredActive.length}
-          page={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-        />
+        <div ref={sentinel} className="py-3 text-center text-xs text-muted-foreground">
+          {hasMore
+            ? 'Loading more…'
+            : `Showing all ${filteredActive.length} ${filteredActive.length === 1 ? 'project' : 'projects'}`}
+        </div>
       </>
 
       <ProjectsFilterDrawer

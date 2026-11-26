@@ -6,12 +6,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 import { ensureFreshToken, getAccessToken } from "./keycloakService";
-import {
-  notifyForbidden,
-  notifyNetworkError,
-  notifySessionExpired,
-  notifyUnauthorized,
-} from "./authErrors";
+import { notifySessionExpired, SessionExpiredError } from "./authErrors";
 
 interface RetryableConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -37,7 +32,7 @@ axiosInstance.interceptors.request.use(
     if (!refreshed) {
       // Don't redirect / log out here - just tell the user.
       notifySessionExpired();
-      return Promise.reject(new Error("Session expired. Please log in again."));
+      return Promise.reject(new SessionExpiredError());
     }
 
     // ✅ Step 2: Attach token to request
@@ -57,7 +52,21 @@ axiosInstance.interceptors.request.use(
 
 // ─── Response interceptor ─────────────────────────────────────────────────────
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // The API envelope can report a failure with HTTP 200: treat that as an error too
+    if (response.data?.success === false) {
+      return Promise.reject(
+        new AxiosError(
+          response.data.message || "Request failed",
+          AxiosError.ERR_BAD_RESPONSE,
+          response.config,
+          response.request,
+          response,
+        ),
+      );
+    }
+    return response;
+  },
   async (error: AxiosError) => {
     console.error(
       "[API Response Error]",
@@ -66,18 +75,13 @@ axiosInstance.interceptors.response.use(
       error.message,
     );
 
-    // No response at all -> server unreachable / CORS / timeout
+    // Errors are shown to the user by the caller (showError), which reads the
+    // reason from this error. No response = server unreachable / CORS / timeout.
     if (!error.response) {
-      if (error.code === "ERR_NETWORK") notifyNetworkError();
       return Promise.reject(error);
     }
 
     const status = error.response.status;
-
-    if (status === 403) {
-      notifyForbidden();
-      return Promise.reject(error);
-    }
 
     const originalRequest = error.config as RetryableConfig | undefined;
 
@@ -89,7 +93,6 @@ axiosInstance.interceptors.response.use(
     // Already retried once with a fresh token and still 401:
     // this is a permission problem on that endpoint, NOT an expired session.
     if (originalRequest._retry) {
-      notifyUnauthorized();
       return Promise.reject(error);
     }
 
@@ -100,7 +103,7 @@ axiosInstance.interceptors.response.use(
 
     if (!refreshed) {
       notifySessionExpired();
-      return Promise.reject(error);
+      return Promise.reject(Object.assign(error, { sessionExpired: true }));
     }
 
     // Retry with new token

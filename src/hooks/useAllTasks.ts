@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { projectApiService } from '@/services/projectsApiService';
 import { Project } from '@/types/ProejctsType';
 import { SubTaskNode, TaskListNode } from '@/types/taskTypes';
+import { showError } from '@/lib/errorAlert';
 
 export interface GlobalTask extends SubTaskNode {
   projectId: number;
@@ -76,9 +77,12 @@ export function useAllTasks() {
         lists.forEach((l) => flatten(l.tasks, list[i], l, out));
       });
       setFailedProjects(failed);
+      const firstFailure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+      if (firstFailure) showError(firstFailure.reason, `Couldn't load tasks for ${failed} project(s)`);
       setTasks(out);
-    } catch {
+    } catch (err) {
       setError(true);
+      showError(err, 'Failed to load tasks');
     } finally {
       setLoading(false);
     }
