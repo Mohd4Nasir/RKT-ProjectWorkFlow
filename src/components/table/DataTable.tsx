@@ -82,12 +82,12 @@ function DataTableInner<TData>({
       {/* Table with vertical + horizontal scroll, sticky header */}
       <div
         ref={scrollRef}
-        className="overflow-auto max-h-[640px] scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent"
+        className="overflow-auto max-h-[max(380px,calc(100vh-24rem))] scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent"
       >
         <table className="w-full text-sm border-collapse min-w-max">
           <thead className="sticky top-0 z-20">
             {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id} className="border-b border-border bg-[#E8E2F8]/60 backdrop-blur-sm">
+              <tr key={hg.id} className="border-b border-border bg-muted/80 backdrop-blur-sm">
                 {hg.headers.map((header, colIdx) => {
                   const canSort = header.column.getCanSort();
                   const sorted = header.column.getIsSorted();
@@ -100,7 +100,7 @@ function DataTableInner<TData>({
                         'border-r border-border last:border-r-0 whitespace-nowrap uppercase tracking-wide',
                         'select-none',
                         canSort && 'cursor-pointer hover:text-foreground hover:bg-primary/5 transition-colors',
-                        stickyFirstCol && colIdx === 0 && 'sticky left-0 z-10 bg-[#E8E2F8]/80',
+                        stickyFirstCol && colIdx === 0 && 'sticky left-0 z-10 bg-muted',
                       )}
                       onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
                     >

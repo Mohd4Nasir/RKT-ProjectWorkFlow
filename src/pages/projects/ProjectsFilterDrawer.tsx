@@ -10,7 +10,8 @@ import { cn } from '@/lib/utils';
 export interface FilterField {
   id: string;
   label: string;
-  type?: 'text' | 'date' | 'select';
+  /** daterange -> keys `${id}From` / `${id}To`; numrange -> `${id}Min` / `${id}Max` */
+  type?: 'text' | 'date' | 'select' | 'daterange' | 'numrange';
   options?: { label: string; value: string }[];
 }
 
@@ -54,7 +55,7 @@ export function ProjectsFilterDrawer({
           <h3 className="font-semibold text-base">{title}</h3>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { setDraft({ match: 'any', values: {} }); onReset(); }}
+              onClick={() => { setDraft({ match: 'all', values: {} }); onReset(); }}
               className="text-xs font-semibold text-primary hover:text-primary-hover transition-colors"
             >
               Reset
@@ -84,14 +85,23 @@ export function ProjectsFilterDrawer({
 
         {/* Scrollable filter list */}
         <div className="flex-1 overflow-y-auto px-5 py-3 space-y-4">
-          {visibleFields.map((f) => (
-            <FilterSection
-              key={f.id}
-              field={f}
-              value={draft.values[f.id] || ''}
-              onChange={(v) => setDraft((d) => ({ ...d, values: { ...d.values, [f.id]: v } }))}
-            />
-          ))}
+          {visibleFields.map((f) =>
+            f.type === 'daterange' || f.type === 'numrange' ? (
+              <RangeSection
+                key={f.id}
+                field={f}
+                values={draft.values}
+                onChange={(k, v) => setDraft((d) => ({ ...d, values: { ...d.values, [k]: v } }))}
+              />
+            ) : (
+              <FilterSection
+                key={f.id}
+                field={f}
+                value={draft.values[f.id] || ''}
+                onChange={(v) => setDraft((d) => ({ ...d, values: { ...d.values, [f.id]: v } }))}
+              />
+            ),
+          )}
           {visibleFields.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-8">No matching filters</p>
           )}
@@ -128,6 +138,39 @@ export function ProjectsFilterDrawer({
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function RangeSection({
+  field, values, onChange,
+}: { field: FilterField; values: Record<string, string>; onChange: (key: string, v: string) => void }) {
+  const isDate = field.type === 'daterange';
+  const lo = `${field.id}${isDate ? 'From' : 'Min'}`;
+  const hi = `${field.id}${isDate ? 'To' : 'Max'}`;
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{field.label}</Label>
+      <div className="grid grid-cols-2 gap-2">
+        <Input
+          type={isDate ? 'date' : 'number'}
+          min={isDate ? undefined : 0}
+          value={values[lo] || ''}
+          onChange={(e) => onChange(lo, e.target.value)}
+          placeholder={isDate ? 'From' : 'Min'}
+          aria-label={`${field.label} ${isDate ? 'from' : 'min'}`}
+          className="h-9"
+        />
+        <Input
+          type={isDate ? 'date' : 'number'}
+          min={isDate ? undefined : 0}
+          value={values[hi] || ''}
+          onChange={(e) => onChange(hi, e.target.value)}
+          placeholder={isDate ? 'To' : 'Max'}
+          aria-label={`${field.label} ${isDate ? 'to' : 'max'}`}
+          className="h-9"
+        />
+      </div>
+    </div>
   );
 }
 

@@ -13,6 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { showError, showWarning } from '@/lib/errorAlert';
 
 const DEFAULT_FORM = {
   name: '',
@@ -36,7 +37,7 @@ export function AddUser() {
     e.preventDefault();
     
     if (!form.name || !form.email) {
-      toast.error('Please fill in all required fields');
+      showWarning('Please fill in all required fields');
       return;
     }
 
@@ -52,7 +53,7 @@ export function AddUser() {
       setForm(DEFAULT_FORM);
       setOpen(false);
     } catch (error) {
-      toast.error('Failed to create user');
+      showError(error, 'Failed to create user');
     } finally {
       setIsSubmitting(false);
     }

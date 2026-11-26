@@ -1,19 +1,25 @@
-import { useState, memo, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import {
-  X, ChevronUp, ChevronDown, MoreHorizontal, Copy, Tag, Calendar,
-  Edit3, Zap, User,
+  CalendarDays, Check, ChevronDown, ChevronRight, CornerDownRight, FileText, FolderKanban, ListTree,
+  ListTodo, Loader2, Maximize2, Minimize2, Pencil, Plus, Tag, X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Project, Users } from '@/types/ProejctsType';
 import { SubTaskNode, TaskNode } from '@/types/taskTypes';
-import { UserAvatar } from '@/components/UserAvatar';
-import { format } from 'date-fns';
-import { useAppSelector } from '@/store';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { taskService } from '@/services/taskservice';
-import { T, STATUS_CONFIG, PRIORITY_CONFIG, normalizeStatus, FullTreeNode } from './Taskdetailshared';
-import { TaskListSidebar } from './Tasklistsidebar';
+import { isTaskDone, normStatus, priorityOf, priorityUi, taskStatusUi } from './taskUi';
+import { useTaskStatuses } from './useTaskStatuses';
+import { useTaskPriorities } from './useTaskPriorities';
 import { TaskContributors } from './Taskcontributors ';
-import { SubtaskTree } from './SubtaskTree';
+import { TaskPanelTabs } from './TaskPanelExtras';
+import { TaskListRail } from './TaskListRail';
+import { showError } from '@/lib/errorAlert';
 
+const FULLSCREEN_KEY = 'rkt.taskPanel.fullscreen';
+const RAIL_KEY = 'rkt.taskPanel.rail';
 
 interface TaskDetailPanelProps {
   task: SubTaskNode | TaskNode;
@@ -22,439 +28,645 @@ interface TaskDetailPanelProps {
   onClose: () => void;
   onUpdate: (t: SubTaskNode | TaskNode) => void;
   onSelectTask?: (taskId: string) => void;
+  /** called after anything changed on the server so the parent can reload its tree */
+  onChanged?: () => void | Promise<void>;
 }
 
-type TaskTab = 'comments' | 'subtasks' | 'log-hours' | 'documents' | 'dependency' | 'status-timeline' | 'issues' | 'activity';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Any = any;
 
-const TASK_TABS: { id: TaskTab; label: string }[] = [
-  { id: 'comments', label: 'Comments' },
-  { id: 'subtasks', label: 'Task Tree' },
-  { id: 'log-hours', label: 'Log Hours' },
-  { id: 'documents', label: 'Documents' },
-  { id: 'dependency', label: 'Dependency' },
-  { id: 'status-timeline', label: 'Status Timeline' },
-  { id: 'issues', label: 'Issues' },
-  { id: 'activity', label: 'Activity Stream' },
-];
+interface TreeNode {
+  taskId: number;
+  taskTitle: string;
+  taskStatus: string;
+  endDate?: string;
+  subTask?: TreeNode[];
+}
 
+const fmtDay = (d?: string) => {
+  if (!d) return '';
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? '' : dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
 
-export const TaskDetailPanel = memo(function TaskDetailPanel({
-  task, users, project, onClose, onUpdate, onSelectTask,
-}: TaskDetailPanelProps) {
-  const [tab, setTab] = useState<TaskTab>('comments');
-  const [showInfo, setShowInfo] = useState(true);
-  const [comment, setComment] = useState('');
+function countTree(nodes: TreeNode[] = []): { total: number; done: number } {
+  let total = 0;
+  let done = 0;
+  nodes.forEach((n) => {
+    total += 1;
+    if (isTaskDone(n.taskStatus)) done += 1;
+    const c = countTree(n.subTask);
+    total += c.total;
+    done += c.done;
+  });
+  return { total, done };
+}
 
-  const lists = useAppSelector(state => state.tasks.lists);
+/* ───────────────────────── Status picker ───────────────────────── */
 
-  const [selectedListId, setSelectedListId] = useState<string>(
-    String((task as any).listId || (task as any).taskListId || lists[0]?.listId || '')
+function StatusPicker({
+  value, onChange, size = 'md', disabled,
+}: { value?: string; onChange: (s: string) => void; size?: 'sm' | 'md'; disabled?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const options = useTaskStatuses();
+  const upper = (value || '').toUpperCase();
+  const curKey = options.some((o) => o.key === upper) ? upper : normStatus(value);
+  const cur = options.find((s) => s.key === curKey) ?? taskStatusUi(value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          disabled={disabled}
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-md border font-semibold whitespace-nowrap transition-opacity hover:opacity-85 disabled:opacity-60',
+            size === 'md' ? 'px-3 py-1.5 text-xs' : 'px-2 py-0.5 text-[11px]',
+            cur.badge,
+          )}
+        >
+          <span className={cn('h-1.5 w-1.5 rounded-full', cur.dot)} />
+          {cur.label}
+          <ChevronDown className="h-3 w-3 opacity-70" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="z-[200] w-48 p-1" align="start" onClick={(e) => e.stopPropagation()}>
+        {options.map((s) => (
+          <button
+            key={s.key}
+            onClick={() => {
+              setOpen(false);
+              if (s.key !== curKey) onChange(s.key);
+            }}
+            className={cn(
+              'w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-muted text-left',
+              s.key === curKey && 'bg-muted font-semibold',
+            )}
+          >
+            <span className={cn('h-2 w-2 rounded-full', s.dot)} />
+            <span className="flex-1">{s.label}</span>
+            {s.key === curKey && <Check className="h-3.5 w-3.5 text-primary" />}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
   );
+}
 
-  useEffect(() => {
-    const listIdForTask = String((task as any).listId ?? (task as any).taskListId ?? '');
-    if (listIdForTask) setSelectedListId(listIdForTask);
-  }, [task]);
+/* ───────────────────────── Priority picker ───────────────────────── */
 
-  const assignee = users.find((u) => u.id === task.assigneeId);
-  const normalizedStatus = normalizeStatus(task.taskStatus);
-  const statusCfg = STATUS_CONFIG[normalizedStatus] ?? STATUS_CONFIG.todo;
-  const priorityCfg = PRIORITY_CONFIG[task.priority] ?? PRIORITY_CONFIG.medium;
+function PriorityPicker({ value, onChange }: { value?: string; onChange: (p: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const options = useTaskPriorities();
+  const cur = priorityUi(value);
+  const curKey = (value || 'none').toLowerCase();
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold hover:opacity-85 transition-opacity', cur.chip)}
+        >
+          <span className={cn('h-1.5 w-1.5 rounded-full', cur.dot)} />
+          {cur.label}
+          <ChevronDown className="h-3 w-3 opacity-70" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="z-[200] w-40 p-1" align="start">
+        {options.map((p) => (
+          <button
+            key={p.key}
+            onClick={() => { setOpen(false); if (p.key !== curKey) onChange(p.key); }}
+            className={cn('w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-muted text-left', p.key === curKey && 'bg-muted font-semibold')}
+          >
+            <span className={cn('h-2 w-2 rounded-full', p.dot)} />
+            <span className="flex-1">{p.label}</span>
+            {p.key === curKey && <Check className="h-3.5 w-3.5 text-primary" />}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
 
-  function taskCode() {
-    const n = parseInt(String(task.parentTaskId).replace(/\D/g, ''), 10) || 42;
-    return `PRI-${n}`;
-  }
+/** read-only status chip: nested subtasks can only be viewed here, the open task is the one that is editable */
+function StatusBadge({ value }: { value?: string }) {
+  const options = useTaskStatuses();
+  const cur = options.find((s) => s.key === normStatus(value)) ?? taskStatusUi(value);
+  return (
+    <span
+      title="Open this task to change its status"
+      className={cn('inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap cursor-default', cur.badge)}
+    >
+      <span className={cn('h-1.5 w-1.5 rounded-full', cur.dot)} />
+      {cur.label}
+    </span>
+  );
+}
 
-  const pct = normalizedStatus === 'done' ? 100 : normalizedStatus === 'in-progress' ? 50 : 0;
+/* ───────────────────────── Subtask rows ───────────────────────── */
 
-  const handleTaskCardClick = (t: SubTaskNode) => {
-    onSelectTask?.(String(t.taskId));
-  };
+const DEPTH_BORDER = ["border-l-primary", "border-l-info", "border-l-accent-foreground", "border-l-warning"];
 
-  // ══════════════════════════════════════════════
-  // Tab-wise lazy API call system
-  // ══════════════════════════════════════════════
-  const [tabData, setTabData] = useState<Record<string, { taskId: string | number; data: any }>>({});
-  const [tabLoading, setTabLoading] = useState<Record<string, boolean>>({});
-  const [tabError, setTabError] = useState<Record<string, string | null>>({});
-
-  const TAB_APIS: Partial<Record<TaskTab, (taskId: string | number) => Promise<any>>> = {
-    subtasks: async (taskId) => {
-      const res = await taskService.getSubtaskInTaskDeatils(taskId);
-      return res;
-    },
-    comments: async (taskId) => {
-      // const res = await axiosInstance.get(`/task/${taskId}/comments`);
-      // return res.data.data;
-    },
-    documents: async (taskId) => {
-      // const res = await axiosInstance.get(`/task/${taskId}/documents`);
-      // return res.data.data;
-    },
-    dependency: async (taskId) => {
-      // const res = await axiosInstance.get(`/task/${taskId}/dependency`);
-      // return res.data.data;
-    },
-    'status-timeline': async (taskId) => {
-      // const res = await axiosInstance.get(`/task/${taskId}/status-timeline`);
-      // return res.data.data;
-    },
-    issues: async (taskId) => {
-      // const res = await axiosInstance.get(`/task/${taskId}/issues`);
-      // return res.data.data;
-    },
-    activity: async (taskId) => {
-      // const res = await axiosInstance.get(`/task/${taskId}/activity`);
-      // return res.data.data;
-    },
-  };
-
-  useEffect(() => {
-    const fetcher = TAB_APIS[tab];
-    if (!fetcher) return;
-    if (tabData[tab]?.taskId === task.taskId) return;
-
-    let cancelled = false;
-    setTabLoading((prev) => ({ ...prev, [tab]: true }));
-    setTabError((prev) => ({ ...prev, [tab]: null }));
-
-    fetcher(task.taskId)
-      .then((data) => {
-        if (cancelled) return;
-        setTabData((prev) => ({ ...prev, [tab]: { taskId: task.taskId, data } }));
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setTabError((prev) => ({
-          ...prev,
-          [tab]: err?.response?.data?.message || err?.message || 'Failed to load',
-        }));
-      })
-      .finally(() => {
-        if (cancelled) return;
-        setTabLoading((prev) => ({ ...prev, [tab]: false }));
-      });
-
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, task.taskId]);
-
-  const handleSubtaskToggle = useCallback((subtaskId: number, currentStatus: string) => {
-    console.log('toggle', subtaskId, currentStatus);
-  }, []);
-const subtaskRoot: FullTreeNode | null = (() => {
-
-    const raw = tabData.subtasks?.data;
-
-    if (!raw) return null;
-
-    if (Array.isArray(raw)) return raw[0] ?? null;
-
-    if (raw.taskId) return raw as FullTreeNode;
-
-    if (raw.data?.taskId) return raw.data as FullTreeNode;
-
-    return null;
-
-  })();
+function SubtaskRow({
+  node, depth, onOpen,
+}: {
+  node: TreeNode;
+  depth: number;
+  onOpen: (id: number) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  const kids = node.subTask ?? [];
+  const done = isTaskDone(node.taskStatus);
   return (
     <>
-      <div
-        className="fixed inset-0 z-[100]"
-        onClick={onClose}
-      />
-
-      <div
-        className="fixed top-2 right-2 bottom-2 z-[101] w-[99%] flex rounded-2xl shadow-2xl overflow-hidden border animate-slide-in-right background "
-        style={{ borderColor: `${T.navy}1a` }}
+      <li
+        className={cn("group flex items-center gap-2 border-b border-border/60 border-l-[3px] px-3 py-2 hover:bg-primary/[0.06] transition-colors", DEPTH_BORDER[depth % DEPTH_BORDER.length])}
+        style={{ paddingLeft: 12 + depth * 22 }}
       >
-        {/* ══════════ LEFT SIDEBAR (extracted) ══════════ */}
-        <TaskListSidebar
-          lists={lists}
-          selectedListId={selectedListId}
-          onSelectListId={setSelectedListId}
-          selectedTaskId={task.taskId}
-          onSelectTask={handleTaskCardClick}
-        />
+        {kids.length ? (
+          <button onClick={() => setOpen(!open)} className="h-5 w-5 grid place-items-center rounded hover:bg-muted text-muted-foreground">
+            {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          </button>
+        ) : (
+          <CornerDownRight className="h-3.5 w-3.5 text-muted-foreground/60 mx-[3px]" />
+        )}
+        <button
+          onClick={() => onOpen(node.taskId)}
+          className={cn('flex-1 min-w-0 truncate text-left text-sm font-medium hover:text-primary hover:underline', done && 'line-through text-muted-foreground')}
+        >
+          {node.taskTitle}
+        </button>
+        {node.endDate && (
+          <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+            <CalendarDays className="h-3 w-3" /> {fmtDay(node.endDate)}
+          </span>
+        )}
+        <StatusBadge value={node.taskStatus} />
+      </li>
+      {open && kids.map((k) => (
+        <SubtaskRow key={k.taskId} node={k} depth={depth + 1} onOpen={onOpen} />
+      ))}
+    </>
+  );
+}
 
-        {/* ══════════ MAIN CONTENT ══════════ */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-[#F9F7FD]">
-          {/* Top bar */}
-          <div
-            className="flex items-center gap-2 px-4 bg-secondary-55 border-b-2 py-2.5 flex-shrink-0"
-          >
-            <span
-              className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded font-bold"
-              style={{ backgroundColor: `${T.pink}1f`, color: T.pink }}
+/* ───────────────────────── Panel ───────────────────────── */
+
+export const TaskDetailPanel = memo(function TaskDetailPanel({
+  task, project, onClose, onUpdate, onSelectTask, onChanged,
+}: TaskDetailPanelProps) {
+  const t = task as Any;
+  const projectId = project?.projectId ?? t.projectId;
+  const taskId = t.taskId;
+  const listId = t.listId ?? t.taskListId;
+  const status = taskStatusUi(t.taskStatus);
+
+  // ── editing state ──
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [title, setTitle] = useState(t.taskTitle ?? '');
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [desc, setDesc] = useState(t.taskDescription ?? '');
+  const [saving, setSaving] = useState(false);
+  const [fullscreen, setFullscreen] = useState(() => {
+    try { return localStorage.getItem(FULLSCREEN_KEY) === '1'; } catch { return false; }
+  });
+  const [railOpen, setRailOpen] = useState(() => {
+    try { return localStorage.getItem(RAIL_KEY) !== '0'; } catch { return true; }
+  });
+  const setRail = (on: boolean) => {
+    setRailOpen(on);
+    try { localStorage.setItem(RAIL_KEY, on ? '1' : '0'); } catch { /* ignore */ }
+  };
+  const toggleFullscreen = () => {
+    setFullscreen((f) => {
+      try { localStorage.setItem(FULLSCREEN_KEY, f ? '0' : '1'); } catch { /* ignore */ }
+      return !f;
+    });
+  };
+
+  useEffect(() => {
+    setTitle(t.taskTitle ?? '');
+    setDesc(t.taskDescription ?? '');
+    setEditingTitle(false);
+    setEditingDesc(false);
+  }, [taskId, t.taskTitle, t.taskDescription]);
+
+  // Esc closes
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !editingTitle && !editingDesc) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose, editingTitle, editingDesc]);
+
+  // ── subtasks (GET /task/{id}/sub-tree) ──
+  const [tree, setTree] = useState<TreeNode | null>(null);
+  const [loadingTree, setLoadingTree] = useState(true);
+  const [newSub, setNewSub] = useState('');
+  const [creating, setCreating] = useState(false);
+  const subInput = useRef<HTMLInputElement>(null);
+
+  const latestTask = useRef(taskId);
+  latestTask.current = taskId;
+
+  const loadTree = useCallback(async () => {
+    try {
+      const res = await taskService.getSubTree(taskId);
+      if (latestTask.current !== taskId) return; // user already moved to another task
+      const raw = res?.data ?? res;
+      setTree(Array.isArray(raw) ? raw[0] ?? null : raw?.taskId ? raw : null);
+    } catch (err) {
+      setTree(null);
+      showError(err, 'Failed to load subtasks');
+    } finally {
+      setLoadingTree(false);
+    }
+  }, [taskId]);
+
+  useEffect(() => {
+    setLoadingTree(true);
+    loadTree();
+  }, [loadTree]);
+
+  const subtasks = tree?.subTask ?? [];
+  const counts = useMemo(() => countTree(subtasks), [subtasks]);
+  const pct = counts.total ? Math.round((counts.done / counts.total) * 100) : isTaskDone(t.taskStatus) ? 100 : 0;
+
+  // ── server writes ──
+  const patchTask = async (patch: { taskTitle?: string; taskDescription?: string; startDate?: string; endDate?: string }) => {
+    setSaving(true);
+    try {
+      await taskService.updateTask(projectId, taskId, {
+        taskTitle: patch.taskTitle ?? t.taskTitle,
+        taskDescription: patch.taskDescription ?? t.taskDescription ?? '',
+        taskStartDate: (patch.startDate ?? t.startDate) || undefined,
+        taskEndDate: (patch.endDate ?? t.endDate) || undefined,
+      });
+      onUpdate({
+        ...t,
+        taskTitle: patch.taskTitle ?? t.taskTitle,
+        taskDescription: patch.taskDescription ?? t.taskDescription,
+        startDate: patch.startDate ?? t.startDate,
+        endDate: patch.endDate ?? t.endDate,
+      });
+      onChanged?.();
+      toast.success('Saved');
+      return true;
+    } catch (err) {
+      showError(err, 'Failed to save changes');
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const changeStatus = async (next: string) => {
+    try {
+      await taskService.updateTaskStatus(projectId, taskId, next);
+      onUpdate({ ...t, taskStatus: next });
+      onChanged?.();
+      toast.success(`Status: ${taskStatusUi(next).label}`);
+    } catch (err) {
+      // 409: "Task can't be marked Completed: N open issue(s) must be closed first"
+      showError(err, 'Failed to update status');
+    }
+  };
+
+  const changePriority = async (next: string) => {
+    try {
+      await taskService.updateTaskPriority(projectId, taskId, next);
+      onUpdate({ ...t, taskPriority: next.toUpperCase(), priority: next.toUpperCase() });
+      onChanged?.();
+      toast.success(`Priority: ${priorityUi(next).label}`);
+    } catch (err) {
+      showError(err, 'Failed to update priority');
+    }
+  };
+
+  const createSubtask = async () => {
+    const name = newSub.trim();
+    if (!name || creating) return;
+    setCreating(true);
+    try {
+      await taskService.createTask({
+        projectId,
+        taskListId: listId,
+        parentTaskId: taskId,
+        taskTitle: name,
+        taskStatus: 'TODO',
+      });
+      setNewSub('');
+      await loadTree();
+      onChanged?.();
+      toast.success('Subtask created');
+      subInput.current?.focus();
+    } catch (err) {
+      showError(err, 'Failed to create subtask');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const saveTitle = async () => {
+    const v = title.trim();
+    if (!v || v === t.taskTitle) {
+      setTitle(t.taskTitle ?? '');
+      setEditingTitle(false);
+      return;
+    }
+    if (await patchTask({ taskTitle: v })) setEditingTitle(false);
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[100] bg-foreground/40 backdrop-blur-[1px] animate-fade-in" onClick={onClose} />
+
+      <aside
+        className={cn(
+          'fixed inset-y-0 right-0 z-[101] flex flex-col bg-background shadow-2xl border-l border-primary/30 animate-slide-in-right transition-[width] duration-200',
+          fullscreen ? 'w-screen' : railOpen ? 'w-[min(1340px,98vw)]' : 'w-[min(1080px,96vw)]',
+        )}
+        role="dialog"
+        aria-label="Task details"
+      >
+        {/* ── Header: breadcrumb ── */}
+        <header className="relative flex items-center gap-2 px-5 h-12 shrink-0 text-white bg-[image:var(--gradient-hero)]">
+          <span aria-hidden className="absolute inset-x-0 bottom-0 h-[3px] bg-gradient-to-r from-primary via-info to-accent" />
+          {!railOpen && (
+            <button
+              onClick={() => setRail(true)}
+              className="hidden lg:grid h-8 w-8 place-items-center rounded-md text-white/70 hover:bg-white/15 hover:text-white"
+              aria-label="Show task list" title="Show task list"
             >
-              <Tag className="h-3 w-3" /> Task
-            </span>
-            <span className="text-xs font-mono font-medium" style={{ color: `${T.para}99` }}>{taskCode()}</span>
-            <div className="flex items-center gap-1 ml-auto">
-             
-              <button
-                onClick={onClose}
-                className="h-7 w-7 rounded flex items-center justify-center transition-colors"
-                style={{ color: `${T.para}99` }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fde2e8'; e.currentTarget.style.color = '#c23a5e'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = `${T.para}99`; }}
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {/* Task title */}
-            <div className="px-5 pt-4 pb-2">
-              <div className="flex items-start gap-2">
-                <h2 className="text-xl font-bold flex-1" style={{ color: T.navy }}>{task.taskTitle}</h2>
-
-              </div>
-              <div className="text-xs mt-1" style={{ color: `${T.para}bb` }}>
-                By {task.createdBy || 'Unknown'}
-                <span className="inline-flex items-center gap-1">📋 {project.projectTitle}</span>
-              </div>
-            </div>
-
-            {/* Current status bar */}
-            <div
-              className="mx-5 mb-3 flex items-center bg-secondary-55  border-2 gap-2 p-3 rounded-xl"
-            >
-              <span
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold"
-                style={{ backgroundColor: statusCfg.bg, color: statusCfg.color }}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
-                {statusCfg.label}
-              </span>
-              {/* <ChevronDown className="h-3.5 w-3.5" style={{ color: `${T.para}88` }} /> */}
-              <span className="text-[10px] uppercase tracking-wide ml-1 font-semibold" style={{ color: `${T.para}88` }}>
-                Current Status
-              </span>
-              
-            </div>
-
-            {/* ── Task Info section ── */}
-            <div className="mx-5 mb-3 grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Left - Task Information */}
-              <div
-                className="rounded-xl overflow-hidden flex flex-col"
-                style={{ border: `1px solid ${T.navy}14` }}
-              >
+              <ListTodo className="h-4 w-4" />
+            </button>
+          )}
+          <nav className="flex items-center gap-1.5 text-xs text-white/70 min-w-0">
+            <FolderKanban className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate max-w-[160px]">{project?.projectTitle ?? t.projectTitle}</span>
+            {t.listTitle && (<><ChevronRight className="h-3 w-3 shrink-0" /><span className="truncate max-w-[140px]">{t.listTitle}</span></>)}
+            {t.parentTaskId && (
+              <>
+                <ChevronRight className="h-3 w-3 shrink-0" />
                 <button
-                  onClick={() => setShowInfo(!showInfo)}
-                  className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold flex-shrink-0"
-                  style={{
-                    backgroundColor: `${T.pink}0f`,
-                    borderBottom: showInfo ? `1px solid ${T.navy}14` : "none",
-                    color: T.navy,
-                  }}
+                  onClick={() => onSelectTask?.(String(t.parentTaskId))}
+                  className="truncate max-w-[160px] hover:text-white hover:underline"
+                  title="Open parent task"
                 >
-                  <ChevronDown
-                    className="h-4 w-4 transition-transform duration-200"
-                    style={{
-                      color: T.pink,
-                      transform: showInfo ? "rotate(0deg)" : "rotate(-90deg)",
-                    }}
-                  />
-                  Task Information
+                  {t.parentTaskTitle || `Task ${t.parentTaskId}`}
                 </button>
+              </>
+            )}
+            <ChevronRight className="h-3 w-3 shrink-0" />
+            <span className="font-mono font-semibold text-white bg-white/15 rounded px-1.5 py-0.5">TSK-{taskId}</span>
+          </nav>
+          <button
+            onClick={toggleFullscreen}
+            className="ml-auto hidden sm:grid h-8 w-8 place-items-center rounded-md text-white/70 hover:bg-white/15 hover:text-white"
+            aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}
+            title={fullscreen ? 'Exit full screen' : 'Full screen'}
+          >
+            {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
+          <button
+            onClick={onClose}
+            className="h-8 w-8 grid place-items-center rounded-md text-white/70 hover:bg-white/15 hover:text-white"
+            aria-label="Close"
+            title="Close (Esc)"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </header>
 
-                {showInfo && (
-                  <div className="p-4 grid grid-cols-2 gap-y-4 text-xs flex-1">
-                    <div>
-                      <span className="block mb-1 font-medium" style={{ color: `${T.para}88` }}>Owner</span>
-                      {assignee ? (
-                        <div className="flex items-center gap-2">
-                          <UserAvatar name={assignee.name} size="sm" />
-                          <span className="font-semibold" style={{ color: T.navy }}>{assignee.name}</span>
-                        </div>
-                      ) : <span style={{ color: `${T.para}66` }}>—</span>}
-                    </div>
-                    <div>
-                      <span className="block mb-1 font-medium" style={{ color: `${T.para}88` }}>Work Hours</span>
-                      <span className="font-mono font-bold" style={{ color: T.navy }}>00:00</span>
-                    </div>
-                    <div>
-                      <span className="block mb-1 font-medium" style={{ color: `${T.para}88` }}>Status</span>
-                      <span
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold"
-                        style={{ backgroundColor: statusCfg.bg, color: statusCfg.color }}
-                      >
-                        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />{statusCfg.label}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="block mb-1 font-medium" style={{ color: `${T.para}88` }}>Start Date</span>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5" style={{ color: `${T.para}77` }} />
-                        <span style={{ color: `${T.para}bb` }}>
-                          {task.startDate ? format(new Date(task.startDate), 'dd MMM yyyy') : '—'}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <span className="block mb-1 font-medium" style={{ color: `${T.para}88` }}>Due Date</span>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5" style={{ color: `${T.para}77` }} />
-                        <span className="font-semibold" style={{ color: T.navy }}>
-                          {task.endDate ? format(new Date(task.endDate), 'dd MMM yyyy') : '—'}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <span className="block mb-1 font-medium" style={{ color: `${T.para}88` }}>Priority</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: priorityCfg.dot }} />
-                        <span className="font-semibold" style={{ color: T.navy }}>{priorityCfg.label}</span>
-                      </div>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="block mb-1 font-medium" style={{ color: `${T.para}88` }}>Completion</span>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${T.navy}0f` }}>
-                          <div
-                            className="h-full rounded-full transition-all"
-                            style={{ width: `${pct}%`, backgroundColor: pct === 100 ? T.teal : pct > 0 ? T.pink : `${T.navy}22` }}
-                          />
-                        </div>
-                        <span className="font-mono font-bold" style={{ color: T.navy }}>{pct}%</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+        <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
+          {railOpen && (
+            <TaskListRail
+              taskId={taskId}
+              listId={listId}
+              onSelect={(id) => id !== taskId && onSelectTask?.(String(id))}
+              onCollapse={() => setRail(false)}
+            />
+          )}
 
-              {/* Right - Contributors */}
-              <div className="flex">
-                <TaskContributors taskId={task.taskId} />
-              </div>
+          {/* ═════════ MAIN ═════════ */}
+          <main className="flex-1 min-w-0 lg:overflow-y-auto px-6 py-5 space-y-6 scrollbar-thin bg-background">
+            {/* Title */}
+            <div>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-foreground bg-[image:var(--gradient-primary)] rounded-full px-2.5 py-0.5 mb-2 shadow-sm">
+                <Tag className="h-3 w-3" /> {t.parentTaskId ? 'Subtask' : 'Task'}
+              </span>
+              {editingTitle ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    autoFocus
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveTitle();
+                      if (e.key === 'Escape') { setTitle(t.taskTitle ?? ''); setEditingTitle(false); }
+                    }}
+                    className="flex-1 text-2xl font-display font-bold bg-card border border-primary/50 rounded-md px-2 py-1 outline-none ring-2 ring-primary/20"
+                  />
+                  <Button size="sm" onClick={saveTitle} disabled={saving}>
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setTitle(t.taskTitle ?? ''); setEditingTitle(false); }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <h1
+                  onClick={() => setEditingTitle(true)}
+                  title="Click to edit"
+                  className="group text-2xl font-display font-bold leading-tight cursor-text rounded-md px-1 -mx-1 hover:bg-muted/70 transition-colors"
+                >
+                  {t.taskTitle}
+                  <Pencil className="inline h-4 w-4 ml-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </h1>
+              )}
+            </div>
+
+            {/* Quick actions */}
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusPicker value={t.taskStatus} onChange={changeStatus} />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => subInput.current?.focus()}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> Add subtask
+              </Button>
             </div>
 
             {/* Description */}
-            <div className="mx-5 mb-3 rounded-xl overflow-hidden" style={{ border: `1px solid ${T.navy}14` }}>
-              <button
-                className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold transition-colors"
-                style={{ backgroundColor: `${T.pink}0f`, borderBottom: `1px solid ${T.navy}14`, color: T.navy }}
-              >
-                <ChevronDown className="h-4 w-4" style={{ color: T.pink }} />
-                Description
-                <Edit3 className="h-3.5 w-3.5 ml-1" style={{ color: `${T.para}77` }} />
-              </button>
-              <div className="p-4 text-xs min-h-[60px]" style={{ color: `${T.para}bb` }}>
-                {task.taskDescription || <span className="italic">No description added yet.</span>}
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="mx-5 mb-5 rounded-xl overflow-hidden" style={{ border: `1px solid ${T.navy}14` }}>
-              <div className="flex overflow-x-auto" style={{ borderBottom: `1px solid ${T.navy}14` }}>
-                {TASK_TABS.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setTab(t.id)}
-                    className="px-4 py-2.5 text-xs font-bold whitespace-nowrap border-b-2 transition-colors flex-shrink-0"
-                    style={{
-                      borderColor: tab === t.id ? T.pink : 'transparent',
-                      color: tab === t.id ? T.pink : `${T.para}88`,
-                    }}
-                  >
-                    {t.label}
+            <section>
+              <h3 className="flex items-center gap-2 text-sm font-bold mb-2">
+                <span className="grid h-6 w-6 place-items-center rounded-md bg-info/15 text-info"><FileText className="h-3.5 w-3.5" /></span> Description
+                {!editingDesc && (
+                  <button onClick={() => setEditingDesc(true)} className="ml-1 text-xs font-medium text-primary hover:underline inline-flex items-center gap-1">
+                    <Pencil className="h-3 w-3" /> Edit
                   </button>
-                ))}
+                )}
+              </h3>
+              {editingDesc ? (
+                <div className="space-y-2">
+                  <textarea
+                    autoFocus
+                    value={desc}
+                    onChange={(e) => setDesc(e.target.value)}
+                    rows={6}
+                    placeholder="Add a description…"
+                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 resize-y"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      disabled={saving}
+                      onClick={async () => { if (await patchTask({ taskDescription: desc })) setEditingDesc(false); }}
+                    >
+                      {saving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />} Save
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setDesc(t.taskDescription ?? ''); setEditingDesc(false); }}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onClick={() => setEditingDesc(true)}
+                  className={cn(
+                    'rounded-lg border border-dashed border-info/40 bg-info/[0.04] px-3 py-3 text-sm whitespace-pre-wrap cursor-text hover:bg-info/10 transition-colors min-h-[56px]',
+                    !t.taskDescription && 'text-muted-foreground italic',
+                  )}
+                >
+                  {t.taskDescription || 'Click to add a description…'}
+                </div>
+              )}
+            </section>
+
+            {/* Subtasks */}
+            <section>
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="flex items-center gap-2 text-sm font-bold">
+                  <span className="grid h-6 w-6 place-items-center rounded-md bg-primary/15 text-primary"><ListTree className="h-3.5 w-3.5" /></span> Subtasks
+                  <span className="text-xs font-semibold text-muted-foreground tabular-nums">
+                    {counts.done}/{counts.total}
+                  </span>
+                </h3>
+                <div className="flex-1 max-w-[220px] h-2 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full rounded-full bg-[image:var(--gradient-success)] transition-all" style={{ width: `${pct}%` }} />
+                </div>
+                <span className="text-xs font-semibold tabular-nums">{pct}%</span>
               </div>
 
-              <div className="p-4">
-                {/* ── COMMENTS TAB ── */}
-                {tab === 'comments' && (
-                  <div>
-                    <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${T.navy}14` }}>
-                      <div className="flex items-start gap-2 p-3">
-                        {assignee && <UserAvatar name={assignee.name} size="sm" />}
-                        <textarea
-                          value={comment}
-                          onChange={(e) => setComment(e.target.value)}
-                          placeholder="Write a comment…"
-                          rows={4}
-                          className="flex-1 text-xs bg-transparent border-none outline-none resize-none"
-                          style={{ color: T.navy }}
-                        />
-                      </div>
+              <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
+                {loadingTree ? (
+                  <div className="py-6 text-center text-xs text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin inline mr-1" /> Loading subtasks…
+                  </div>
+                ) : subtasks.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-muted-foreground">No subtasks yet — add the first one below.</div>
+                ) : (
+                  <ul>
+                    {subtasks.map((s) => (
+                      <SubtaskRow
+                        key={s.taskId}
+                        node={s}
+                        depth={0}
+                        onOpen={(id) => onSelectTask?.(String(id))}
+                      />
+                    ))}
+                  </ul>
+                )}
+
+                {/* inline create */}
+                <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-muted/30">
+                  <Plus className="h-4 w-4 text-muted-foreground" />
+                  <input
+                    ref={subInput}
+                    value={newSub}
+                    onChange={(e) => setNewSub(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && createSubtask()}
+                    placeholder="Create a subtask and press Enter…"
+                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                    disabled={creating}
+                  />
+                  {newSub.trim() && (
+                    <Button size="sm" className="h-7 text-xs" onClick={createSubtask} disabled={creating}>
+                      {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Create'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* Comments · Log hours · Documents · Issues · Activity */}
+            <TaskPanelTabs taskId={taskId} projectId={projectId} onTaskChanged={onChanged} openIssueCount={t.openIssueCount} />
+          </main>
+
+          {/* ═════════ DETAILS SIDEBAR ═════════ */}
+          <aside className={cn(
+            'shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-muted/40 lg:overflow-y-auto px-5 py-5 space-y-5 scrollbar-thin',
+            fullscreen ? 'lg:w-[380px]' : 'lg:w-[320px]',
+          )}>
+            <section className="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
+              <h3 className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-[image:var(--gradient-hero)]">Details</h3>
+              <dl className="p-4 space-y-4 text-sm">
+                <Field label="Status"><StatusPicker value={t.taskStatus} onChange={changeStatus} size="sm" /></Field>
+
+                <Field label="Priority">
+                  <PriorityPicker value={priorityOf(t)} onChange={changePriority} />
+                </Field>
+
+                <Field label="Start date">
+                  <input
+                    type="date"
+                    value={(t.startDate || '').slice(0, 10)}
+                    onChange={(e) => e.target.value && patchTask({ startDate: e.target.value })}
+                    className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
+                  />
+                </Field>
+
+                <Field label="Due date">
+                  <input
+                    type="date"
+                    value={(t.endDate || '').slice(0, 10)}
+                    onChange={(e) => e.target.value && patchTask({ endDate: e.target.value })}
+                    className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
+                  />
+                </Field>
+
+                <Field label="Progress">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full bg-[image:var(--gradient-success)]" style={{ width: `${pct}%` }} />
                     </div>
-
-                    {tabLoading.comments ? (
-                      <p className="text-xs text-center py-4" style={{ color: `${T.para}77` }}>Loading comments…</p>
-                    ) : tabError.comments ? (
-                      <p className="text-xs text-center py-4" style={{ color: '#c23a5e' }}>{tabError.comments}</p>
-                    ) : ((tabData.comments?.data || [])).length === 0 ? (
-                      <p className="text-xs text-center py-4" style={{ color: `${T.para}77` }}>No comments yet.</p>
-                    ) : (
-                      (tabData.comments?.data || []).map((c: any) => {
-                        const author = users.find((u) => u.id === c.authorId);
-                        return (
-                          <div
-                            key={c.id}
-                            className="flex items-start gap-2 mt-4 p-3 rounded-xl"
-                            style={{ backgroundColor: `${T.peach}40` }}
-                          >
-                            {author && <UserAvatar name={author.name} size="sm" />}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold" style={{ color: T.navy }}>{author?.name}</span>
-                                <span className="text-[10px]" style={{ color: `${T.para}77` }}>
-                                  {format(new Date(c.createdAt), 'dd MMM yyyy')}
-                                </span>
-                              </div>
-                              <p className="text-xs mt-1" style={{ color: T.para }}>{c.text}</p>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
+                    <span className="text-xs font-semibold tabular-nums">{pct}%</span>
                   </div>
-                )}
+                </Field>
 
-                {/* ── SUBTASKS TAB — GET /task/{taskId}/full-tree ── */}
-                {/* ── SUBTASKS TAB — root (dddd) + poori nested chain ── */}
-                {tab === 'subtasks' && (
-                  <div className="space-y-2">
-                    {tabLoading.subtasks ? (
-                      <p className="text-xs text-center py-4" style={{ color: `${T.para}77` }}>Loading subtasks…</p>
-                    ) : tabError.subtasks ? (
-                      <p className="text-xs text-center py-4" style={{ color: '#c23a5e' }}>{tabError.subtasks}</p>
-                    ) : !subtaskRoot ? (
-                      <p className="text-xs text-center py-4" style={{ color: `${T.para}77` }}>No subtasks yet.</p>
-                    ) : (
-                      <SubtaskTree task={subtaskRoot} onToggle={handleSubtaskToggle} />
-                    )}
-                  </div>
-                )}
+                <Field label="Reporter"><span className="text-xs font-medium">{t.createdBy || '—'}</span></Field>
+                <Field label="Project"><span className="text-xs font-medium">{project?.projectTitle ?? t.projectTitle ?? '—'}</span></Field>
+                {t.listTitle && <Field label="List"><span className="text-xs font-medium">{t.listTitle}</span></Field>}
+              </dl>
+            </section>
 
-                {/* ── OTHER TABS (future: log-hours, documents, dependency, status-timeline, issues, activity) ── */}
-                {(tab !== 'comments' && tab !== 'subtasks') && (
-                  <div>
-                    {tabLoading[tab] ? (
-                      <div className="flex items-center justify-center py-8 text-xs" style={{ color: `${T.para}66` }}>
-                        Loading {tab.replace('-', ' ')}…
-                      </div>
-                    ) : tabError[tab] ? (
-                      <div className="flex items-center justify-center py-8 text-xs" style={{ color: '#c23a5e' }}>
-                        {tabError[tab]}
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center py-8 text-xs" style={{ color: `${T.para}66` }}>
-                        No {tab.replace('-', ' ')} content yet.
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+            <section>
+              <TaskContributors taskId={taskId} />
+            </section>
+          </aside>
         </div>
-      </div>
+      </aside>
     </>
   );
 });
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[88px_1fr] items-center gap-2">
+      <dt className="text-[11px] font-bold uppercase tracking-wide text-primary/80">{label}</dt>
+      <dd className="min-w-0">{children}</dd>
+    </div>
+  );
+}

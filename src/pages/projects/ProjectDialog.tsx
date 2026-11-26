@@ -73,31 +73,31 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl p-0 overflow-hidden gap-0 max-h-[92vh] flex flex-col rounded-2xl border-none shadow-2xl">
         {/* Header */}
-        <div className="relative px-8 pt-8 pb-6" style={{ background: '#F9CBBF' }}>
-          <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: '#f582ae' }} />
+        <div className="relative px-8 pt-8 pb-6" style={{ background: 'var(--gradient-hero)' }}>
+          <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: 'hsl(337 78% 62%)' }} />
           <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl opacity-10" style={{ background: '#8bd3dd' }} />
 
           <div className="relative flex items-start gap-4">
-            <div className="h-14 w-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(0, 24, 88, 0.1)' }}>
+            <div className="h-14 w-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.16)' }}>
               {editing ? (
-                <Briefcase className="h-7 w-7" style={{ color: '#001858' }} />
+                <Briefcase className="h-7 w-7" style={{ color: '#ffffff' }} />
               ) : (
-                <File className="h-7 w-7" style={{ color: '#001858' }} />
+                <File className="h-7 w-7" style={{ color: '#ffffff' }} />
               )}
             </div>
             <div className="flex-1">
               <DialogHeader className="space-y-1.5">
-                <DialogTitle className="text-2xl font-bold tracking-tight" style={{ color: '#001858' }}>
+                <DialogTitle className="text-2xl font-bold tracking-tight" style={{ color: '#ffffff' }}>
                   {editing ? 'Edit Project' : 'Create New Project'}
                 </DialogTitle>
-                <DialogDescription style={{ color: 'rgba(0, 24, 88, 0.7)' }}>
+                <DialogDescription style={{ color: 'rgba(255,255,255,0.78)' }}>
                   {editing ? 'Update project information and settings' : 'Fill in the details to get started'}
                 </DialogDescription>
               </DialogHeader>
             </div>
             <Badge
               className="px-3 py-1 text-xs font-medium border-0"
-              style={{ background: 'rgba(0, 24, 88, 0.08)', color: '#001858' }}
+              style={{ background: 'rgba(255,255,255,0.16)', color: '#ffffff' }}
             >
               {editing ? 'Edit Mode' : 'New'}
             </Badge>
@@ -105,10 +105,10 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8" style={{ background: '#ffffff' }}>
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8" style={{ background: 'hsl(var(--card))' }}>
           {/* Project Name */}
           <div className="space-y-2">
-            <Label className="text-sm font-semibold text-[#001858]">
+            <Label className="text-sm font-semibold text-foreground">
               Project Name <span style={{ color: '#f582ae' }}>*</span>
             </Label>
             <div className="relative">
@@ -117,17 +117,17 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
                 value={form.name}
                 onChange={(e) => set('name', e.target.value)}
                 placeholder="Enter project name..."
-                className="h-12 px-4 text-base transition-all  text-[#001858] duration-200 focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="h-12 px-4 text-base transition-all  text-foreground duration-200 focus-visible:ring-0 focus-visible:ring-offset-0"
                 style={{
-                  border: '2px solid #f3d2c1',
-                  background: '#ffffff',
-                  color: '#001858',
+                  border: '1px solid hsl(var(--input))',
+                  background: 'hsl(var(--card))',
+                  color: 'hsl(var(--foreground))',
                   borderRadius: '12px'
                 }}
               />
               {form.name && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-[#8bd3dd] flex items-center justify-center">
-                  <span className="text-[10px] text-[#001858]">✓</span>
+                  <span className="text-[10px] text-foreground">✓</span>
                 </div>
               )}
             </div>
@@ -136,10 +136,10 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
           {/* Description */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-semibold text-[#001858]" >Description</Label>
+              <Label className="text-sm font-semibold text-foreground" >Description</Label>
              
             </div>
-            <div className="rounded-xl overflow-hidden border-[#f3d2c1] " style={{ border: '2px solid #f3d2c1', borderRadius: '12px' }}>
+            <div className="rounded-xl overflow-hidden border-border " style={{ border: '1px solid hsl(var(--input))', borderRadius: '12px' }}>
               <RichTextEditor
                 value={form.description}
                 onChange={(v) => set('description', v)}
@@ -153,43 +153,43 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
           {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> */}
             {/* Owner */}
             {/* <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#001858' }}>
-                <Users2 className="h-4 w-4" style={{ color: '#001858' }} />
+              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
+                <Users2 className="h-4 w-4" style={{ color: 'hsl(var(--foreground))' }} />
                 Project Owner
               </Label>
               <Select value={form.ownerId} onValueChange={(v) => set('ownerId', v)}>
                 <SelectTrigger
                   className="h-12 rounded-xl px-4 transition-all duration-200 focus:ring-0"
                   style={{
-                    border: '2px solid #f3d2c1',
-                    background: '#ffffff',
-                    color: '#001858'
+                    border: '1px solid hsl(var(--input))',
+                    background: 'hsl(var(--card))',
+                    color: 'hsl(var(--foreground))'
                   }}
                 >
                   <SelectValue>
                     {owner ? (
                       <div className="flex items-center gap-3">
                         <UserAvatar name={owner.name} size="sm" />
-                        <span className="font-medium" style={{ color: '#001858' }}>{owner.name}</span>
+                        <span className="font-medium" style={{ color: 'hsl(var(--foreground))' }}>{owner.name}</span>
                       </div>
                     ) : (
-                      <span style={{ color: '#001858' }}>Select owner</span>
+                      <span style={{ color: 'hsl(var(--foreground))' }}>Select owner</span>
                     )}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent style={{ background: '#ffffff' }}>
+                <SelectContent style={{ background: 'hsl(var(--card))' }}>
                   {users.map((u: Users) => (
                     <SelectItem
                       key={u.id}
                       value={u.id}
-                      className="hover:bg-[#f3d2c1] focus:bg-[#f3d2c1] transition-colors"
-                      style={{ color: '#001858' }}
+                      className="hover:bg-muted focus:bg-muted transition-colors"
+                      style={{ color: 'hsl(var(--foreground))' }}
                     >
                       <div className="flex items-center gap-3 py-1">
                         <UserAvatar name={u.name} size="sm" />
                         <div className="flex flex-col">
-                          <span className="text-sm font-medium" style={{ color: '#001858' }}>{u.name}</span>
-                          <span className="text-xs" style={{ color: '#001858' }}>{u.department}</span>
+                          <span className="text-sm font-medium" style={{ color: 'hsl(var(--foreground))' }}>{u.name}</span>
+                          <span className="text-xs" style={{ color: 'hsl(var(--foreground))' }}>{u.department}</span>
                         </div>
                       </div>
                     </SelectItem>
@@ -200,28 +200,28 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
 
             {/* Company */}
             {/* <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#001858' }}>
-                <Building2 className="h-4 w-4" style={{ color: '#001858' }} />
+              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
+                <Building2 className="h-4 w-4" style={{ color: 'hsl(var(--foreground))' }} />
                 Company
               </Label>
               <Select value={form.company} onValueChange={(v) => set('company', v)}>
                 <SelectTrigger
                   className="h-12 rounded-xl px-4 transition-all duration-200 focus:ring-0"
                   style={{
-                    border: '2px solid #f3d2c1',
-                    background: '#ffffff',
-                    color: '#001858'
+                    border: '1px solid hsl(var(--input))',
+                    background: 'hsl(var(--card))',
+                    color: 'hsl(var(--foreground))'
                   }}
                 >
                   <SelectValue placeholder="Select company" />
                 </SelectTrigger>
-                <SelectContent style={{ background: '#ffffff' }}>
+                <SelectContent style={{ background: 'hsl(var(--card))' }}>
                   {COMPANIES.map((c) => (
                     <SelectItem
                       key={c}
                       value={c}
-                      className="hover:bg-[#f3d2c1] focus:bg-[#f3d2c1] transition-colors"
-                      style={{ color: '#001858' }}
+                      className="hover:bg-muted focus:bg-muted transition-colors"
+                      style={{ color: 'hsl(var(--foreground))' }}
                     >
                       {c}
                     </SelectItem>
@@ -235,28 +235,28 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
           {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> */}
             {/* Status */}
             {/* <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: '#001858' }}>Status</Label>
+              <Label className="text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>Status</Label>
               <Select value={form.status} onValueChange={(v) => set('status', v)}>
                 <SelectTrigger
                   className="h-12 rounded-xl px-4 transition-all duration-200 focus:ring-0"
                   style={{
-                    border: '2px solid #f3d2c1',
-                    background: '#ffffff',
-                    color: '#001858'
+                    border: '1px solid hsl(var(--input))',
+                    background: 'hsl(var(--card))',
+                    color: 'hsl(var(--foreground))'
                   }}
                 >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent style={{ background: '#ffffff' }}>
+                <SelectContent style={{ background: 'hsl(var(--card))' }}>
                   {STATUSES.map((s) => (
                     <SelectItem
                       key={s.value}
                       value={s.value}
-                      className="hover:bg-[#f3d2c1] focus:bg-[#f3d2c1] transition-colors"
+                      className="hover:bg-muted focus:bg-muted transition-colors"
                     >
                       <div className="flex items-center gap-2">
                         <span className={cn('h-2.5 w-2.5 rounded-full', s.dot)} />
-                        <span style={{ color: '#001858' }}>{s.label}</span>
+                        <span style={{ color: 'hsl(var(--foreground))' }}>{s.label}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -266,8 +266,8 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
 
             {/* Tag */}
             {/* <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#001858' }}>
-                <Tag className="h-4 w-4" style={{ color: '#001858' }} />
+              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
+                <Tag className="h-4 w-4" style={{ color: 'hsl(var(--foreground))' }} />
                 Tag
               </Label>
               <Input
@@ -276,9 +276,9 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
                 placeholder="Add a tag..."
                 className="h-12 rounded-xl px-4 transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0"
                 style={{
-                  border: '2px solid #f3d2c1',
-                  background: '#ffffff',
-                  color: '#001858'
+                  border: '1px solid hsl(var(--input))',
+                  background: 'hsl(var(--card))',
+                  color: 'hsl(var(--foreground))'
                 }}
               />
               <div className="flex flex-wrap gap-2 pt-1">
@@ -292,8 +292,8 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
                       form.tag === t ? 'shadow-sm' : 'hover:shadow-sm'
                     )}
                     style={{
-                      background: form.tag === t ? '#001858' : '#f3d2c1',
-                      color: form.tag === t ? '#ffffff' : '#001858',
+                      background: form.tag === t ? 'hsl(var(--primary))' : 'hsl(var(--muted))',
+                      color: form.tag === t ? 'hsl(var(--primary-foreground))' : 'hsl(var(--foreground))',
                     }}
                   >
                     {t}
@@ -306,8 +306,8 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
           {/* Dates */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#001858' }}>
-                <Calendar className="h-4 w-4" style={{ color: '#001858' }} />
+              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
+                <Calendar className="h-4 w-4" style={{ color: 'hsl(var(--foreground))' }} />
                 Start Date
               </Label>
               <Input
@@ -316,15 +316,15 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
                 onChange={(e) => set('startDate', e.target.value)}
                 className="h-12 rounded-xl px-4 transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0"
                 style={{
-                  border: '2px solid #f3d2c1',
-                  background: '#ffffff',
-                  color: '#001858'
+                  border: '1px solid hsl(var(--input))',
+                  background: 'hsl(var(--card))',
+                  color: 'hsl(var(--foreground))'
                 }}
               />
             </div>
             <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#001858' }}>
-                <Calendar className="h-4 w-4" style={{ color: '#001858' }} />
+              <Label className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
+                <Calendar className="h-4 w-4" style={{ color: 'hsl(var(--foreground))' }} />
                 End Date
               </Label>
               <Input
@@ -333,9 +333,9 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
                 onChange={(e) => set('endDate', e.target.value)}
                 className="h-12 rounded-xl px-4 transition-all duration-200 focus-visible:ring-0 focus-visible:ring-offset-0"
                 style={{
-                  border: '2px solid #f3d2c1',
-                  background: '#ffffff',
-                  color: '#001858'
+                  border: '1px solid hsl(var(--input))',
+                  background: 'hsl(var(--card))',
+                  color: 'hsl(var(--foreground))'
                 }}
               />
             </div>
@@ -344,13 +344,13 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
 
         {/* Footer */}
         <div className="px-8 py-5 border-t-2 flex items-center justify-between" style={{
-          borderColor: '#f3d2c1',
-          background: '#ffffff'
+          borderColor: 'hsl(var(--border))',
+          background: 'hsl(var(--card))'
         }}>
           <div className="flex items-center gap-3">
             {/* {owner && (
-              <span className="text-xs" style={{ color: '#001858' }}>
-                Owned by <span className="font-semibold" style={{ color: '#001858' }}>{owner.name}</span>
+              <span className="text-xs" style={{ color: 'hsl(var(--foreground))' }}>
+                Owned by <span className="font-semibold" style={{ color: 'hsl(var(--foreground))' }}>{owner.name}</span>
               </span>
             )} */}
           </div>
@@ -358,8 +358,8 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
             <Button
               variant="ghost"
               onClick={() => onOpenChange(false)}
-              className="rounded-xl px-6 font-medium transition-all duration-200 hover:bg-[#f3d2c1]"
-              style={{ color: '#001858' }}
+              className="rounded-xl px-6 font-medium transition-all duration-200 hover:bg-muted"
+              style={{ color: 'hsl(var(--foreground))' }}
             >
               Cancel
             </Button>
@@ -370,8 +370,8 @@ export function ProjectDialog({ open, onOpenChange, editing, onSave }: Props) {
                 !valid && "opacity-50 cursor-not-allowed"
               )}
               style={{
-                background: valid ? '#EEBBC3' : '#f3d2c1',
-                color: '#001858'
+                background: valid ? 'hsl(var(--primary))' : 'hsl(var(--muted))',
+                color: valid ? 'hsl(var(--primary-foreground))' : 'hsl(var(--muted-foreground))'
               }}
               onClick={() => onSave(form)}
               disabled={!valid}

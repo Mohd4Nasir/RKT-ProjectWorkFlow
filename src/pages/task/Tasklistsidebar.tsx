@@ -37,9 +37,9 @@ export function TaskListSidebar({
   );
 
   return (
-    <div className="w-80 flex-shrink-0 flex flex-col bg-[#F9F7FD]">
+    <div className="w-80 flex-shrink-0 flex flex-col bg-background">
       <div
-        className=" pb-3 relative z-[110] bg-[#F9F7FD]"
+        className=" pb-3 relative z-[110] bg-background"
         style={{ borderBottom: `1px solid ${T.navy}14` }}
       >
         <div className="flex items-center gap-2 px-2 bg-secondary-55 mb-3 border-b-2 py-3.5 flex-shrink-0"
@@ -55,7 +55,7 @@ export function TaskListSidebar({
 
         <Select value={selectedListId} onValueChange={onSelectListId}>
           <SelectTrigger
-            className="w-full h-10 bg-white  text-heading border-2-heading  rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-150 shadow-sm"
+            className="w-full h-10 bg-white dark:bg-card  text-heading border-2-heading  rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-150 shadow-sm"
            
           >
             <SelectValue placeholder="Select a list..." />

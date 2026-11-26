@@ -21,7 +21,7 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Settings" subtitle="Manage organization preferences, theme and notifications." />
+      <PageHeader wip="Settings are not saved to the server yet" title="Settings" subtitle="Manage organization preferences, theme and notifications." />
 
       <div className="card-elevated p-6">
         <div className="flex items-center gap-2 mb-4">

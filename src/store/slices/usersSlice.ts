@@ -1,9 +1,8 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Users } from '@/types/ProejctsType';
-import { mockUsers } from '@/services/mockData';
 
 interface UsersState { items: Users[]; }
-const initialState: UsersState = { items: mockUsers };
+const initialState: UsersState = { items: [] };
 
 const slice = createSlice({
   name: 'users',

@@ -1,3 +1,4 @@
+import type { TaskActivityPage } from "@/utils/activity";
 import { Project, ProjectsResponse } from "@/types/ProejctsType";
 import axiosInstance from "./axiosInstance";
 import { apiService } from "./apiService";
@@ -42,8 +43,48 @@ export interface UpdateProjectDto {
   tag?: string;
 }
 
+export interface ExcelImportReport {
+  totalProjects: number;
+  projectsCreated: number;
+  projectsSkipped: number;
+  totalTasks: number;
+  tasksCreated: number;
+  tasksSkipped: number;
+  totalComments: number;
+  commentsCreated: number;
+  totalAttachments: number;
+  attachmentsCreated: number;
+  errors?: string[];
+  warnings?: string[];
+}
+
+export interface ExcelImportResponse {
+  success: boolean;
+  message?: string;
+  data?: ExcelImportReport;
+}
+
 // API Service
 export const projectApiService = {
+  // Import projects/tasks/comments from an Excel file
+  importFromExcel: async (
+    file: File,
+    options: { skipExisting: boolean; mapUsersByName: boolean },
+  ): Promise<ExcelImportResponse> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await axiosInstance.post<ExcelImportResponse>(
+      "/project/import-excel",
+      formData,
+      {
+        params: options,
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 120_000,
+      },
+    );
+    return response.data;
+  },
+
   // Get all projects
   getProjects: async (): Promise<Project[]> => {
     try {
@@ -137,20 +178,7 @@ addProjectMember: async ({ projectId, userId, projectRole }: AddProjectMemberPar
       params: { projectId, userId, projectRole }
     });
 
-    // Rethrow with user-friendly message
-    if (error.response?.data?.message) {
-      throw new Error(error.response.data.message);
-    } else if (error.response?.status === 404) {
-      throw new Error('Project or user not found');
-    } else if (error.response?.status === 403) {
-      throw new Error('You do not have permission to add members to this project');
-    } else if (error.response?.status === 409) {
-      throw new Error('User is already a member of this project');
-    } else if (error.code === 'ECONNABORTED') {
-      throw new Error('Request timed out. Please try again.');
-    } else {
-      throw new Error(error.message || 'Failed to add member to project');
-    }
+    throw error; // showError() reads the status and server message
   }
 },
 
@@ -171,13 +199,37 @@ addProjectMember: async ({ projectId, userId, projectRole }: AddProjectMemberPar
     }
   },
 
-  // Update project
+  // Update project  (PUT /project)
+  // The API requires title, description, start AND end date every time, so any
+  // field that is not supplied is filled from the project's current details.
   updateProject: async (
-    id: string,
-    data: UpdateProjectDto,
-  ): Promise<Project> => {
+    id: string | number,
+    data: {
+      projectTitle?: string;
+      projectDescription?: string;
+      startDate?: string;
+      endDate?: string;
+    },
+  ) => {
     try {
-      const response = await axiosInstance.put(`/projects/${id}`, data);
+      const need =
+        !data.projectTitle || !data.projectDescription || !data.startDate || !data.endDate;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let current: any = {};
+      if (need) {
+        const res = await axiosInstance.get(`/project/${id}`);
+        current = res.data?.data ?? res.data ?? {};
+      }
+      const day = (d?: string) => (d ? String(d).slice(0, 10) : undefined);
+      const payload = {
+        projectId: Number(id),
+        projectTitle: data.projectTitle || current.projectTitle,
+        projectDescription:
+          data.projectDescription || current.projectDescription || current.description || "-",
+        startDate: day(data.startDate || current.startDate),
+        endDate: day(data.endDate || current.endDate),
+      };
+      const response = await axiosInstance.put("/project", payload);
       return response.data;
     } catch (error) {
       console.error(`Update project ${id} error:`, error);
@@ -210,18 +262,48 @@ addProjectMember: async ({ projectId, userId, projectRole }: AddProjectMemberPar
     }
   },
 
-  // Remove member from project
-  removeMember: async (projectId: string, userId: string): Promise<Project> => {
+  // Remove member from project  (DELETE /team/remove-member)
+  removeMember: async (projectId: number | string, userId: number | string) => {
     try {
-      const response = await axiosInstance.delete(
-        `/projects/${projectId}/members/${userId}`,
-      );
+      const response = await axiosInstance.delete("/team/remove-member", {
+        data: { projectId: Number(projectId), userId: Number(userId) },
+      });
       return response.data;
     } catch (error) {
       console.error(`Remove member from project ${projectId} error:`, error);
       throw error;
     }
   },
+
+  // Change a member's role  (PUT /team/update-member-role)
+  updateMemberRole: async (
+    projectId: number | string,
+    userId: number | string,
+    projectRole: string,
+  ) => {
+    const response = await axiosInstance.put("/team/update-member-role", {
+      projectId: Number(projectId),
+      userId: Number(userId),
+      projectRole,
+    });
+    return response.data;
+  },
+
+  // Change project status  (PUT /project/status)
+  updateProjectStatus: async (projectId: number | string, projectStatus: string) => {
+    const response = await axiosInstance.put("/project/status", {
+      projectId: Number(projectId),
+      projectStatus,
+    });
+    return response.data;
+  },
+
+  // All allowed project statuses  (GET /project/statuses)
+  getProjectStatuses: async () => {
+    const response = await axiosInstance.get("/project/statuses");
+    return response.data;
+  },
+
   getRoles : async () => {
     const roleResponse = await axiosInstance.get("/team/project/roles");
     return roleResponse.data;
@@ -235,5 +317,16 @@ addProjectMember: async ({ projectId, userId, projectRole }: AddProjectMemberPar
       console.error(`Get activity tracker for project ${projectId} error:`, error);
       throw error;
     }
-  }
+  },
+
+  // GET /activities/task/{taskId}?category=&page=&size=  → { content, page, size, totalElements, totalPages, hasNext }
+  taskActivities: async (
+    taskId: number | string,
+    opts: { category?: 'TASK' | 'COMMENT' | 'ISSUE' | 'ATTACHMENT' | 'WORKLOG'; page?: number; size?: number } = {},
+  ): Promise<TaskActivityPage> => {
+    const response = await axiosInstance.get(`/activities/task/${taskId}`, {
+      params: { category: opts.category, page: opts.page ?? 0, size: opts.size ?? 20 },
+    });
+    return response.data?.data;
+  },
 };

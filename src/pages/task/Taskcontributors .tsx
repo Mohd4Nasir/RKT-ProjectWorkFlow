@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { taskService } from '@/services/taskservice';
 import { T } from './Taskdetailshared';
+import { showError } from '@/lib/errorAlert';
 
 /**
  * Uses these taskService methods (see taskservice.ts):
@@ -97,11 +98,13 @@ function InitialsAvatar({ name, id }: { name: string; id: string | number }) {
 }
 // -------------------------------------------------------------------------------
 
+let rolesCache: Role[] | null = null; // roles are global — fetch once per session
+
 export function TaskContributors({ taskId }: TaskContributorsProps) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
-  const [roles, setRoles] = useState<Role[]>([]);
+  const [roles, setRoles] = useState<Role[]>(rolesCache ?? []);
   const [loadingRoles, setLoadingRoles] = useState(false);
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -115,14 +118,17 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
   const [updatingUserId, setUpdatingUserId] = useState<string | number | null>(null);
 
   // Load current contributors whenever the task changes
+  const latestTask = useRef(taskId);
+  latestTask.current = taskId;
   const loadMembers = useCallback(async () => {
     if (!taskId) return;
     try {
       setLoadingMembers(true);
       const res = await taskService.getTaskMembers(taskId);
-      setMembers(res);
+      if (latestTask.current === taskId) setMembers(res);
     } catch (err) {
       console.error(err);
+      showError(err, 'Failed to load contributors');
     } finally {
       setLoadingMembers(false);
     }
@@ -134,13 +140,16 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
 
   // Roles are global — fetch once on mount
   useEffect(() => {
+    if (rolesCache) return;
     const loadRoles = async () => {
       try {
         setLoadingRoles(true);
         const res = await taskService.getTaskMemberRoles();
+        rolesCache = res;
         setRoles(res);
       } catch (err) {
         console.error(err);
+        showError(err, 'Failed to load roles');
       } finally {
         setLoadingRoles(false);
       }
@@ -159,6 +168,7 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
       setAssignableUsers(res);
     } catch (err) {
       console.error(err);
+      showError(err, 'Failed to load available users');
     } finally {
       setLoadingAssignable(false);
     }
@@ -173,6 +183,7 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
       setShowAddForm(false);
     } catch (err) {
       console.error(err);
+      showError(err, 'Failed to add contributor');
     } finally {
       setAdding(false);
     }
@@ -189,6 +200,7 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
       await taskService.assignTaskMember({ userId: member.userId, taskId, taskMemberRole: userTaskRole });
     } catch (err) {
       console.error(err);
+      showError(err, 'Failed to update role');
       // revert on failure
       setMembers((prev) =>
         prev.map((m) => (m.userId === member.userId ? { ...m, userTaskRole: previousRole } : m)),
@@ -199,13 +211,13 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
   };
 
   return (
-    <div className="rounded-xl overflow-hidden flex flex-col w-full border 1px solid" style={{ border: `1px solid ${T.navy}14` }}>
+    <div className="rounded-xl overflow-hidden flex flex-col w-full border 1px solid" style={{ border: `1px solid hsl(var(--border))` }}>
       <div
         className="px-4 py-3 text-sm font-bold flex items-center justify-between flex-shrink-0"
         style={{
-          backgroundColor: `${T.teal}12`,
-          borderBottom: `1px solid ${T.navy}14`,
-          color: T.navy,
+          backgroundColor: `hsl(var(--info) / 0.12)`,
+          borderBottom: `1px solid hsl(var(--border))`,
+          color: 'hsl(var(--foreground))',
         }}
       >
         Task Contributors
@@ -222,25 +234,25 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
       {showAddForm && (
         <div
           className="p-3 space-y-2 flex-shrink-0"
-          style={{ backgroundColor: `${T.peach}22`, borderBottom: `1px solid ${T.navy}14` }}
+          style={{ backgroundColor: `hsl(var(--muted))`, borderBottom: `1px solid hsl(var(--border))` }}
         >
           {/* Dropdown 1: user to add, from GET /task/{taskId}/not-assigned-member */}
           <Select value={newUserId} onValueChange={setNewUserId}>
             <SelectTrigger
               className="w-full h-8 rounded-lg px-2 text-xs font-semibold"
-              style={{ backgroundColor: T.white, border: `1px solid ${T.navy}22`, color: T.navy }}
+              style={{ backgroundColor: 'hsl(var(--popover))', border: `1px solid hsl(var(--border))`, color: 'hsl(var(--foreground))' }}
             >
               <SelectValue placeholder={loadingAssignable ? 'Loading users…' : 'Select a member to add'} />
             </SelectTrigger>
             <SelectContent
               className="z-[1000]"
-              style={{ backgroundColor: T.white, border: `1px solid ${T.navy}22` }}
+              style={{ backgroundColor: 'hsl(var(--popover))', border: `1px solid hsl(var(--border))` }}
               position="popper"
               sideOffset={4}
               align="start"
             >
               {assignableUsers.length === 0 ? (
-                <div className="px-3 py-2 text-xs" style={{ color: `${T.para}88` }}>
+                <div className="px-3 py-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
                   {loadingAssignable ? 'Loading…' : 'No users available to add'}
                 </div>
               ) : (
@@ -249,7 +261,7 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
   key={u.userId}
   value={String(u.userId)}
   className="text-xs"
-  style={{ color: T.navy }}
+  style={{ color: 'hsl(var(--foreground))' }}
 >
   <div className="flex items-center gap-2 w-full">
     <InitialsAvatar name={u.name} id={u.userId} />
@@ -265,19 +277,19 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
           <Select value={newRole} onValueChange={setNewRole}>
             <SelectTrigger
               className="w-full h-8 rounded-lg px-2 text-xs font-semibold"
-              style={{ backgroundColor: T.white, border: `1px solid ${T.navy}22`, color: T.navy }}
+              style={{ backgroundColor: 'hsl(var(--popover))', border: `1px solid hsl(var(--border))`, color: 'hsl(var(--foreground))' }}
             >
               <SelectValue placeholder={loadingRoles ? 'Loading roles…' : 'Select a role'} />
             </SelectTrigger>
             <SelectContent
               className="z-[1000]"
-              style={{ backgroundColor: T.white, border: `1px solid ${T.navy}22` }}
+              style={{ backgroundColor: 'hsl(var(--popover))', border: `1px solid hsl(var(--border))` }}
               position="popper"
               sideOffset={4}
               align="start"
             >
               {roles.map((r) => (
-                <SelectItem key={r} value={r} className="text-xs" style={{ color: T.navy }}>
+                <SelectItem key={r} value={r} className="text-xs" style={{ color: 'hsl(var(--foreground))' }}>
                   {humanizeRole(r)}
                 </SelectItem>
               ))}
@@ -295,56 +307,46 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
         </div>
       )}
 
-      <div className="p-4 flex-1">
+      <div className="p-2 flex-1">
         {loadingMembers && (
-          <div className="text-xs" style={{ color: `${T.para}99` }}>Loading...</div>
+          <div className="p-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading...</div>
         )}
 
         {!loadingMembers && members.length === 0 && (
-          <div className="text-xs" style={{ color: `${T.para}99` }}>No contributors assigned.</div>
+          <div className="p-2 text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>No contributors assigned.</div>
         )}
 
         {!loadingMembers && members.length > 0 && (
           // Caps at ~5 rows tall, then scrolls — so it stays usable as the team grows.
-          <div
-            className="overflow-hidden rounded-lg max-h-[320px] overflow-y-auto"
-            style={{ borderColor: `${T.navy}14` }}
-          >
+          <div className="max-h-[360px] overflow-y-auto">
             {members.map((member) => (
               <div
                 key={member.userId}
-                className="group grid grid-cols-[1fr_170px] items-center px-4 py-3 border-b last:border-b-0 transition-colors hover:bg-slate-50"
-                style={{ borderColor: `${T.navy}10` }}
+                className="flex items-start gap-3 rounded-lg px-2 py-2.5 border-b last:border-b-0 transition-colors hover:bg-muted/50"
+                style={{ borderColor: `hsl(var(--border))` }}
               >
-                {/* User */}
-                <div className="flex items-center gap-3">
-                  <InitialsAvatar name={member.name} id={member.userId} />
+                <InitialsAvatar name={member.name} id={member.userId} />
 
-                  <div className="min-w-0">
-                    <p className="font-semibold truncate" style={{ color: T.navy }}>
-                      {member.name}
-                    </p>
-                    <p className="text-xs truncate" style={{ color: T.para }}>
-                      {member.email}
-                    </p>
-                  </div>
-                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-semibold leading-5" style={{ color: 'hsl(var(--foreground))' }} title={member.name}>
+                    {member.name}
+                  </p>
+                  <p className="truncate text-xs" style={{ color: 'hsl(var(--muted-foreground))' }} title={member.email}>
+                    {member.email}
+                  </p>
 
-                {/* Role: plain label by default, becomes the editable dropdown on row hover.
-                    The Select trigger stays mounted & fully laid out at all times so Radix
-                    can measure its position correctly — we just visually cover it with the
-                    label overlay and fade the overlay out on hover, instead of toggling
-                    display:none (which breaks Radix's popper positioning). */}
-                <div className="flex justify-end relative h-9 w-[180px]">
+                  {/* Role: compact dropdown, always visible */}
                   <Select
                     value={member.userTaskRole}
                     onValueChange={(role) => handleRoleChange(member, role)}
+                    disabled={updatingUserId === member.userId}
                   >
                     <SelectTrigger
-                      className="w-[180px] h-9 rounded-lg px-3 text-xs font-semibold border-0 shadow-none"
+                      aria-label={`Role of ${member.name}`}
+                      className="mt-1.5 h-7 w-auto max-w-full justify-start gap-1.5 rounded-full border-0 py-0 pl-2.5 pr-2 text-[11px] font-semibold shadow-none ring-offset-0 focus:ring-1 focus:ring-offset-0 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:shrink-0"
                       style={{
-                        backgroundColor: `${T.teal}15`,
-                        color: T.navy,
+                        backgroundColor: `hsl(var(--info) / 0.14)`,
+                        color: 'hsl(var(--foreground))',
                       }}
                     >
                       <SelectValue placeholder="Select Role" />
@@ -356,12 +358,12 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
                max-h-[220px]
                overflow-y-auto"
                       style={{
-                        backgroundColor: T.white,
-                        border: `1px solid ${T.navy}22`,
+                        backgroundColor: 'hsl(var(--popover))',
+                        border: `1px solid hsl(var(--border))`,
                       }}
                       position="popper"
                       sideOffset={4}
-                      align="end"
+                      align="start"
                     >
                       <div className="py-1">
                         {roles.map((role) => (
@@ -388,7 +390,7 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
                                 backgroundColor:
                                   role === member.userTaskRole
                                     ? T.pink
-                                    : `${T.navy}33`,
+                                    : `hsl(var(--muted-foreground) / 0.4)`,
                               }}
                             />
                             <span>{humanizeRole(role)}</span>
@@ -397,17 +399,6 @@ export function TaskContributors({ taskId }: TaskContributorsProps) {
                       </div>
                     </SelectContent>
                   </Select>
-
-                  {/* Static label overlay — covers the trigger until the row is hovered,
-                      then fades out (and stops blocking clicks) so the real select is usable. */}
-                  <div
-                    className="absolute inset-0 flex items-center gap-2 px-3 rounded-lg pointer-events-none opacity-100 group-hover:opacity-0 transition-opacity"
-                    style={{ backgroundColor: `${T.teal}15`, color: T.navy }}
-                  >
-                    <span className="text-xs font-semibold truncate">
-                      {humanizeRole(member.userTaskRole || '')}
-                    </span>
-                  </div>
                 </div>
               </div>
             ))}

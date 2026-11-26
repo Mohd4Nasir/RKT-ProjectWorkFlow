@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Bell, Search, LogOut, Moon, Sun, Settings, User as UserIcon, Menu } from 'lucide-react';
+import { Bell, Search, LogOut, Moon, Sun, Settings, User as UserIcon, Menu, KeyRound } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { logout } from '@/store/slices/authSlice';
-import { setTheme, toggleSidebar } from '@/store/slices/uiSlice';
+import { setMobileNav, setTheme, toggleSidebar } from '@/store/slices/uiSlice';
 import { markAllRead } from '@/store/slices/notificationsSlice';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -17,7 +17,7 @@ import { relativeTime } from '@/utils/format';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { performLogout } from '@/services/keycloakService';
+import { performLogout, goToChangePassword } from '@/services/keycloakService';
 
 export function Header() {
   const dispatch = useAppDispatch();
@@ -26,7 +26,19 @@ export function Header() {
   const theme = useAppSelector((s) => s.ui.theme);
   const notifications = useAppSelector((s) => s.notifications.items);
   const projects = useAppSelector((s) => s.projects.items);
-  const tasks = useAppSelector((s) => s.tasks.items);
+  // tasks slice is a nested tree (lists -> tasks -> subTask); flatten for search
+  const taskLists = useAppSelector((s) => s.tasks.lists);
+  const tasks = useMemo(() => {
+    const out: { id: string; title: string }[] = [];
+    const walk = (nodes: { taskId: number; taskTitle: string; subTask?: unknown[] }[] = []) => {
+      for (const n of nodes) {
+        out.push({ id: String(n.taskId), title: n.taskTitle ?? '' });
+        walk(n.subTask as typeof nodes);
+      }
+    };
+    for (const l of taskLists ?? []) walk(l.tasks);
+    return out;
+  }, [taskLists]);
   const users = useAppSelector((s) => s.users.items);
   const [loading, setLoading] = useState(false);
 
@@ -37,7 +49,7 @@ export function Header() {
     if (!q.trim()) return null;
     const t = q.toLowerCase();
     return {
-      projects: projects.filter((p) => p.name.toLowerCase().includes(t)).slice(0, 4),
+      projects: projects.filter((p) => (p.projectTitle ?? '').toLowerCase().includes(t)).slice(0, 4),
       tasks: tasks.filter((tk) => tk.title.toLowerCase().includes(t)).slice(0, 4),
       users: users.filter((u) => u.name.toLowerCase().includes(t) || u.email.toLowerCase().includes(t)).slice(0, 4),
     };
@@ -78,28 +90,39 @@ export function Header() {
   };
 
   return (
-    <header className="sticky bg-secondary-55 top-0 z-20 h-16 backdrop-blur-xl border-b border-border flex items-center px-4 md:px-6 gap-3">
+    <header className="sticky top-0 z-20 h-16 bg-card/80 backdrop-blur-xl border-b border-border flex items-center px-4 md:px-6 gap-3">
+      {/* Mobile: open drawer */}
       <button
-        className="h-9 w-9 grid place-items-center rounded-lg hover:bg-muted text-foreground"
+        className="md:hidden h-9 w-9 grid place-items-center rounded-lg hover:bg-muted text-foreground"
+        onClick={() => dispatch(setMobileNav(true))}
+        title="Open menu"
+        aria-label="Open menu"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+      {/* Desktop: collapse / expand */}
+      <button
+        className="hidden md:grid h-9 w-9 place-items-center rounded-lg hover:bg-muted text-foreground"
         onClick={() => dispatch(toggleSidebar())}
-        title="Toggle sidebar"
+        title="Toggle sidebar (Ctrl+B)"
+        aria-label="Toggle sidebar"
       >
         <Menu className="h-5 w-5" />
       </button>
 
-      <div className="relative flex-1 max-w-md">
+      <div className="relative flex-1 max-w-lg">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search projects, tasks, people…"
-          className="pl-9 h-10 bg-muted/40 border-transparent focus-visible:bg-card focus-visible:border-primary/30"
+          className="pl-9 pr-4 h-10 rounded-full bg-muted/60 border-transparent focus-visible:bg-card focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20"
         />
         {results && (
           <div className="absolute top-12 left-0 right-0 bg-card border border-border rounded-xl shadow-lifted p-2 max-h-96 overflow-y-auto scrollbar-thin animate-fade-in">
             <SearchSection title="Projects" empty="No projects">
               {results.projects.map((p) => (
-                <Link key={p.id} to="/projects" onClick={() => setQ('')} className="block px-3 py-2 rounded-lg hover:bg-muted text-sm">{p.name}</Link>
+                <Link key={p.id} to="/projects" onClick={() => setQ('')} className="block px-3 py-2 rounded-lg hover:bg-muted text-sm">{p.projectTitle}</Link>
               ))}
             </SearchSection>
             <SearchSection title="Tasks" empty="No tasks">
@@ -119,16 +142,16 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-1 ml-auto pl-2 border-l border-border/60">
-        <Button variant="ghost" size="icon" onClick={flipTheme} className="h-10 w-10">
+        <Button variant="ghost" size="icon" onClick={flipTheme} className="h-10 w-10" title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'} aria-label="Toggle theme">
           {theme === 'light' ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}
         </Button>
 
         <Popover>
           <PopoverTrigger asChild>
-            <button className="relative h-10 w-10 grid place-items-center rounded-lg hover:bg-muted">
+            <button className="relative h-10 w-10 grid place-items-center rounded-lg hover:bg-muted" title="Notifications" aria-label="Notifications">
               <Bell className="h-[18px] w-[18px]" />
               {unread > 0 && (
-                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-danger ring-2 ring-card" />
+                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary ring-2 ring-card animate-pulse-ring" />
               )}
             </button>
           </PopoverTrigger>
@@ -156,7 +179,7 @@ export function Header() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-2 pl-1 pr-3 h-10 rounded-lg hover:bg-muted ml-1">
-              <UserAvatar className="bg-accent" name={user?.name || 'U'} size="sm" />
+              <UserAvatar name={user?.name || 'U'} size="sm" />
               <div className="hidden sm:block text-left leading-tight">
                 <div className="text-[13px] font-semibold">{user?.name}</div>
                 <div className="text-[10px] text-muted-foreground capitalize">{user?.role}</div>
@@ -167,6 +190,7 @@ export function Header() {
             <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate('/profile')}><UserIcon className="h-4 w-4 mr-2" />Profile</DropdownMenuItem>
+            <DropdownMenuItem onClick={goToChangePassword}><KeyRound className="h-4 w-4 mr-2" />Manage Account </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/settings')}><Settings className="h-4 w-4 mr-2" />Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-danger focus:text-danger"><LogOut className="h-4 w-4 mr-2" />Log out</DropdownMenuItem>

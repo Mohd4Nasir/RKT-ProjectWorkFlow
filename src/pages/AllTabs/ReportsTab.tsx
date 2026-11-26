@@ -1,56 +1,79 @@
 import { useMemo } from 'react';
 import { useAppSelector } from '@/store';
 import { cn } from '@/lib/utils';
-import { BarChart3, TrendingUp, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
-import { format, isAfter } from 'date-fns';
+import { BarChart3, TrendingUp, CheckCircle2, Clock, AlertCircle, Loader2 } from 'lucide-react';
+import { isOverdue, statusGroup, useProjectTasks } from '@/hooks/useProjectTasks';
 
-interface Props { projectId: string; }
+interface Props { projectId: string | number; }
 
 export function ReportsTab({ projectId }: Props) {
-  const tasks     = useAppSelector(s => s.tasks.items.filter(t => t.projectId === projectId));
-  const taskLists = useAppSelector(s => s.taskLists.items.filter(tl => String(tl.projectId) === String(projectId)));
-  const users     = useAppSelector(s => s.users.items);
+  const { lists, tasks, loading, error, reload } = useProjectTasks(projectId);
+  const users = useAppSelector((s) => s.users.items);
 
   const stats = useMemo(() => {
-    const total      = tasks.length;
-    const done       = tasks.filter(t => t.status === 'done').length;
-    const inProgress = tasks.filter(t => t.status === 'in-progress').length;
-    const todo       = tasks.filter(t => t.status === 'todo').length;
-    const overdue    = tasks.filter(t => t.dueDate && t.status !== 'done' && isAfter(new Date(), new Date(t.dueDate))).length;
-    const pct        = total ? Math.round((done / total) * 100) : 0;
-    return { total, done, inProgress, todo, overdue, pct };
+    const g = (k: string) => tasks.filter((t) => statusGroup(t.taskStatus) === k).length;
+    const total = tasks.length;
+    const done = g('done');
+    return {
+      total,
+      done,
+      inProgress: g('in-progress'),
+      todo: g('todo'),
+      overdue: tasks.filter(isOverdue).length,
+      pct: total ? Math.round((done / total) * 100) : 0,
+    };
   }, [tasks]);
 
   const byAssignee = useMemo(() => {
     const map: Record<string, { name: string; total: number; done: number }> = {};
-    tasks.forEach(t => {
-      const key  = t.assigneeId || 'unassigned';
-      const user = users.find(u => u.id === t.assigneeId);
-      if (!map[key]) map[key] = { name: user?.name || 'Unassigned', total: 0, done: 0 };
+    tasks.forEach((t) => {
+      const key = t.assigneeId ? String(t.assigneeId) : 'unassigned';
+      if (!map[key]) {
+        const user = users.find((u) => String(u.id) === key);
+        map[key] = { name: key === 'unassigned' ? 'Unassigned' : user?.name || `User #${key}`, total: 0, done: 0 };
+      }
       map[key].total++;
-      if (t.status === 'done') map[key].done++;
+      if (statusGroup(t.taskStatus) === 'done') map[key].done++;
     });
     return Object.values(map).sort((a, b) => b.total - a.total);
   }, [tasks, users]);
 
-  const byList = useMemo(() =>
-    taskLists.map(tl => {
-      const listTasks = tasks.filter(t => t.taskListId === tl.id && !t.parentTaskId);
-      const done      = listTasks.filter(t => t.status === 'done').length;
-      return { name: tl.name, total: listTasks.length, done };
-    }), [tasks, taskLists]);
+  const byList = useMemo(
+    () =>
+      lists.map((l) => {
+        const listTasks = tasks.filter((t) => t.listId === l.listId);
+        return {
+          name: l.listTitle,
+          total: listTasks.length,
+          done: listTasks.filter((t) => statusGroup(t.taskStatus) === 'done').length,
+        };
+      }),
+    [tasks, lists],
+  );
 
   return (
     <div className="p-6 space-y-6">
+      {loading && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading report…
+        </div>
+      )}
+      {error && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive flex items-center justify-between">
+          Failed to load report data.
+          <button className="underline font-medium" onClick={reload}>Retry</button>
+        </div>
+      )}
+
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
-          { label: 'Total',       val: stats.total,      icon: BarChart3,    color: 'text-slate-600',   bg: 'bg-slate-50' },
-          { label: 'Done',        val: stats.done,       icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'In Progress', val: stats.inProgress, icon: Clock,        color: 'text-blue-600',    bg: 'bg-blue-50' },
-          { label: 'To Do',       val: stats.todo,       icon: TrendingUp,   color: 'text-violet-600',  bg: 'bg-violet-50' },
-          { label: 'Overdue',     val: stats.overdue,    icon: AlertCircle,  color: 'text-red-600',     bg: 'bg-red-50' },
-        ].map(s => {
+          { label: 'Total', val: stats.total, icon: BarChart3, color: 'text-slate-600', bg: 'bg-slate-50' },
+          { label: 'Done', val: stats.done, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'In Progress', val: stats.inProgress, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'To Do', val: stats.todo, icon: TrendingUp, color: 'text-violet-600', bg: 'bg-violet-50' },
+          { label: 'Overdue', val: stats.overdue, icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-50' },
+        ].map((s) => {
           const Icon = s.icon;
           return (
             <div key={s.label} className={cn('rounded-xl p-4 border border-border flex items-center gap-3', s.bg)}>
@@ -82,7 +105,7 @@ export function ReportsTab({ projectId }: Props) {
           <p className="text-xs text-muted-foreground">No data yet.</p>
         ) : (
           <div className="space-y-3">
-            {byAssignee.map(a => (
+            {byAssignee.map((a) => (
               <div key={a.name}>
                 <div className="flex justify-between text-xs mb-1">
                   <span className="font-medium">{a.name}</span>
@@ -107,8 +130,8 @@ export function ReportsTab({ projectId }: Props) {
           <p className="text-xs text-muted-foreground">No lists yet.</p>
         ) : (
           <div className="space-y-3">
-            {byList.map(l => (
-              <div key={l.name}>
+            {byList.map((l, i) => (
+              <div key={`${l.name}-${i}`}>
                 <div className="flex justify-between text-xs mb-1">
                   <span className="font-medium">{l.name}</span>
                   <span className="text-muted-foreground">{l.done}/{l.total}</span>

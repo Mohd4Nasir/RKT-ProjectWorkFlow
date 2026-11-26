@@ -1,4 +1,5 @@
 // src/components/projects/ProjectsTable.tsx
+import { FullscreenButton, FULLSCREEN_CLASS, useFullscreen } from '@/components/FullscreenButton';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,7 +9,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
 import {
-  CalendarDays, Flag, AlertCircle, ClipboardList, Edit2, Trash2, MoreHorizontal,
+  CalendarDays, ClipboardList, Edit2, Trash2, MoreHorizontal,
 } from 'lucide-react';
 import {
   createColumnHelper, flexRender, getCoreRowModel,
@@ -17,7 +18,16 @@ import {
 import { Project, Users } from '@/types/ProejctsType';
 import { InlineEdit } from '@/components/cells/InlineEdit';
 import { DatePickerCell } from '@/components/cells/DatePickerCell';
-import { CountBar, PillEmpty } from './CountBar';
+import { statusUi, PROJECT_STATUS_VALUES } from './projectUi';
+import { CountBar } from './CountBar';
+import type { CSSProperties } from 'react';
+
+// first two columns stay pinned while scrolling horizontally
+const STICKY_LEFT: Record<string, number> = { projectId: 0, projectTitle: 100 };
+const stickyStyle = (id: string, width: number, z: number): CSSProperties =>
+  id in STICKY_LEFT
+    ? { width, minWidth: width, maxWidth: width, position: 'sticky', left: STICKY_LEFT[id], zIndex: z }
+    : { width };
 
 export type ProjectStatsMap = Record<
   string,
@@ -33,7 +43,10 @@ interface ProjectsTableProps {
   onUpdate: (project: Project) => void;
   onOpenTasks: (project: Project) => void;
   onProjectClick?: (projectId: string | number) => void;
+  onChangeStatus?: (project: Project, status: string) => void;
 }
+
+const PROJECT_STATUSES: string[] = PROJECT_STATUS_VALUES as unknown as string[];
 
 type Owner = { ownerName: string; ownerId?: string | number };
 
@@ -170,13 +183,14 @@ function OwnersCell({ owners }: { owners: Owner[] }) {
 export function ProjectsTable({
   projects,
   users,
-  stats,
   onEdit,
   onDelete,
   onUpdate,
   onProjectClick,
+  onChangeStatus,
 }: ProjectsTableProps) {
   const columnHelper = createColumnHelper<Project>();
+  const fs = useFullscreen();
 
   const handleProjectNameClick = (projectId: string | number) => {
     if (onProjectClick) {
@@ -211,7 +225,7 @@ export function ProjectsTable({
         cell: ({ row }) => {
           const p = row.original;
           return (
-            <div>
+            <div className="w-[230px] max-w-[230px]" title={p.projectTitle}>
               <InlineEdit
                 value={p.projectTitle}
                 onSave={(v) => onUpdate({ ...p, projectTitle: v })}
@@ -223,41 +237,39 @@ export function ProjectsTable({
             </div>
           );
         },
-        size: 250,
-      }),
-
-      columnHelper.accessor('progress', {
-        header: '%',
-        cell: ({ row }) => {
-          const p = row.original;
-          const pct = Math.min(100, Math.max(0, stats[p.projectId]?.pct ?? p.progress ?? 0));
-          return (
-            <div className="flex flex-col gap-1 w-full min-w-[70px]">
-              <span className="text-xs font-semibold text-heading">{pct}%</span>
-              <div className="h-1.5 w-full rounded-full bg-accent-55 overflow-hidden">
-                {/* Width is a runtime percentage, not a fixed design
-                    value, so it stays inline style — same reasoning as
-                    the ID color bar: Tailwind can't statically generate
-                    a class for a number that only exists at render time. */}
-                <div
-                  className="h-full rounded-full bg-accent transition-all"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            </div>
-          );
-        },
-        size: 110,
+        size: 270,
       }),
 
       columnHelper.accessor('projectStatus', {
         header: 'Status',
-        cell: ({ getValue }) => {
+        cell: ({ getValue, row }) => {
           const status = getValue();
+          const p = row.original;
           return (
-            <span className={`px-2 py-1 rounded-md text-xs font-medium ${statusClasses(status)}`}>
-              {status}
-            </span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => e.stopPropagation()}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold hover:opacity-80 ${statusUi(status).badge}`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${statusUi(status).dot}`} />
+                  {statusUi(status).label}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-36 p-1" align="start" onClick={(e) => e.stopPropagation()}>
+                {PROJECT_STATUSES.map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => onChangeStatus?.(p, st)}
+                    className={`w-full text-left px-2 py-1.5 rounded text-xs hover:bg-muted ${st === status ? 'bg-muted font-semibold' : ''}`}
+                  >
+                    {statusUi(st).label}
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
           );
         },
         size: 140,
@@ -288,38 +300,6 @@ export function ProjectsTable({
         size: 200,
       }),
 
-      columnHelper.display({
-        id: 'milestones',
-        header: () => (
-          <span className="inline-flex items-center gap-1.5">
-            <Flag className="h-3 w-3" /> Milestones
-          </span>
-        ),
-        cell: ({ row }) => {
-          const s = stats[row.original.projectId];
-          return s?.milestones > 0
-            ? <CountBar done={s.mDone} total={s.milestones} colorClass="bg-info" />
-            : <PillEmpty label="No Milestones" />;
-        },
-        size: 180,
-      }),
-
-      columnHelper.display({
-        id: 'issues',
-        header: () => (
-          <span className="inline-flex items-center gap-1.5">
-            <AlertCircle className="h-3 w-3" /> Issues
-          </span>
-        ),
-        cell: ({ row }) => {
-          const s = stats[row.original.projectId];
-          return s?.issues > 0
-            ? <CountBar done={Math.floor(s.issues / 2)} total={s.issues} colorClass="bg-danger" />
-            : <PillEmpty label="No Issues" />;
-        },
-        size: 160,
-      }),
-
       columnHelper.accessor('startDate', {
         header: () => (
           <span className="inline-flex items-center gap-1.5">
@@ -335,7 +315,7 @@ export function ProjectsTable({
             />
           );
         },
-        size: 130,
+        size: 160,
       }),
 
       columnHelper.accessor('endDate', {
@@ -357,7 +337,7 @@ export function ProjectsTable({
             />
           );
         },
-        size: 130,
+        size: 160,
       }),
 
       columnHelper.display({
@@ -371,7 +351,7 @@ export function ProjectsTable({
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-7 w-7 opacity-70 group-hover:opacity-100 hover:opacity-100 transition-opacity"
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
@@ -393,7 +373,7 @@ export function ProjectsTable({
         size: 50,
       }),
     ],
-    [users, stats, onUpdate, onEdit, onDelete, onProjectClick],
+    [users, onUpdate, onEdit, onDelete, onProjectClick, onChangeStatus],
   );
 
   const table = useReactTable({
@@ -406,17 +386,24 @@ export function ProjectsTable({
   });
 
   return (
-    <div className="card-elevated overflow-hidden">
-      <div className="overflow-auto scrollbar-thin max-h-[640px]">
-        <table className="w-full text-sm border-collapse">
-          <thead className="sticky top-0 z-10 bg-secondary-55 backdrop-blur">
+    <div className={fs.on ? FULLSCREEN_CLASS : undefined}>
+    <div className={`card-elevated rounded-none overflow-hidden ${fs.on ? 'flex flex-col flex-1 min-h-0' : ''}`}>
+      <div className="flex justify-end border-b border-border px-3 py-1.5">
+        <FullscreenButton on={fs.on} onToggle={fs.toggle} />
+      </div>
+      <div className={`overflow-auto scrollbar-thin ${fs.on ? 'flex-1 min-h-0' : 'max-h-[max(380px,calc(100vh-27rem))]'}`}>
+        <table
+          className="text-sm border-collapse"
+          style={{ tableLayout: 'fixed', width: table.getTotalSize(), minWidth: '100%' }}
+        >
+          <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b border-border">
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="h-10 px-3 text-left font-semibold text-sm text-paragraph border-r border-border last:border-r-0 whitespace-nowrap"
-                    style={{ width: header.column.getSize() }}
+                    className={`h-11 px-4 text-left font-semibold text-[11px] uppercase tracking-wider text-muted-foreground whitespace-nowrap ${header.column.id in STICKY_LEFT ? 'bg-muted' : ''}`}
+                    style={stickyStyle(header.column.id, header.column.getSize(), 11)}
                   >
                     {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
@@ -425,16 +412,23 @@ export function ProjectsTable({
             ))}
           </thead>
           <tbody>
+            {table.getRowModel().rows.length === 0 && (
+              <tr>
+                <td colSpan={table.getVisibleLeafColumns().length} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                  No data found
+                </td>
+              </tr>
+            )}
             {table.getRowModel().rows.map((row) => (
               <tr
                 key={row.id}
-                className="border-b border-border last:border-b-0 hover:bg-primary/5 transition-colors group"
+                className="border-b border-border/70 last:border-b-0 hover:bg-primary/[0.04] transition-colors group"
               >
                 {row.getVisibleCells().map((cell) => (
                   <td
                     key={cell.id}
-                    className="px-3 py-2 border-r border-border last:border-r-0"
-                    style={{ width: cell.column.getSize() }}
+                    className={`px-4 py-2.5 whitespace-nowrap overflow-hidden ${cell.column.id in STICKY_LEFT ? 'bg-card group-hover:bg-muted' : ''}`}
+                    style={stickyStyle(cell.column.id, cell.column.getSize(), 1)}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
@@ -444,6 +438,7 @@ export function ProjectsTable({
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   );
 }

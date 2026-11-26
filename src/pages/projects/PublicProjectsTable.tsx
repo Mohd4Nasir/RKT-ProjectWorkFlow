@@ -168,7 +168,7 @@ export function PublicProjectsTable({ projects, users, loading, onJoin }: Props)
   return (
     <>
       <div className="card-elevated overflow-hidden">
-        <div className="overflow-auto scrollbar-thin max-h-[640px]">
+        <div className="overflow-auto scrollbar-thin max-h-[max(380px,calc(100vh-27rem))]">
           <table className="w-full text-sm border-collapse">
             <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
               {table.getHeaderGroups().map((headerGroup) => (

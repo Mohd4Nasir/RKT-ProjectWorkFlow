@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { FilterValues } from '../ProjectsFilterDrawer';
 
-export const emptyFilterValues: FilterValues = { match: 'any', values: {} };
+export const emptyFilterValues: FilterValues = { match: 'all', values: {} };
 
 export function matchPredicates(predicates: boolean[], mode: 'any' | 'all') {
   if (predicates.length === 0) return true;
@@ -28,8 +28,9 @@ export function useProjectsFilter<T>({
   }, [items, query, filters, searchOf, predicates]);
 }
 
-export function useFilterState() {
-  const [values, setValues] = useState<FilterValues>(emptyFilterValues);
+/** `initial` = filters already applied when the page opens (reset() still clears everything) */
+export function useFilterState(initial: FilterValues = emptyFilterValues) {
+  const [values, setValues] = useState<FilterValues>(initial);
   const reset = () => setValues(emptyFilterValues);
   return { values, setValues, reset };
 }

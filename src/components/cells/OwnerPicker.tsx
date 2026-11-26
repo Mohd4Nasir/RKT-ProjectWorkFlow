@@ -35,7 +35,7 @@ export function OwnerPicker({ users, value, onChange, className }: Props) {
           ) : (
             <span className="text-xs text-muted-foreground flex-1">Unassigned</span>
           )}
-          <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
+          <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground opacity-70 group-hover:opacity-100 hover:opacity-100" />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-0" align="start">

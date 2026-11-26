@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   ChevronRight, ChevronDown, Folder, GripVertical, ChevronsDown, ChevronsUp,
   AlignJustify, MoreHorizontal, Edit, Trash2, Move, ListPlus, Plus,
@@ -11,11 +11,13 @@ import { Button } from '@/components/ui/button';
 
 import { TaskListNode, TaskNode, SubTaskNode } from '@/types/taskTypes';
 import { CreateTaskListRequest, CreateTaskRequest } from '@/types/taskTypes';
-import { DeleteConfirmModal } from '@/pages/Task/DeleteConfirmodal';
-import { TaskRow } from './TaskRow';
+import { DeleteConfirmModal } from '@/pages/task/DeleteConfirmodal';
+import { TaskRow, DropZone } from './TaskRow';
 import { ContextMenu } from '../../components/ui/contextMenu';
 import { Users } from '@/types/ProejctsType';
 import { TaskTableHeader } from './TaskTableHeader';
+import { FullscreenButton, FULLSCREEN_CLASS, useFullscreen } from '@/components/FullscreenButton';
+import { showWarning } from '@/lib/errorAlert';
 
 // ── Tree search helpers (D&D ke liye — render order ko touch nahi karte) ──
 function findInNodes(nodes: SubTaskNode[], taskId: number): SubTaskNode | null {
@@ -52,6 +54,14 @@ function countByStatus(nodes: SubTaskNode[], status: string): number {
   );
 }
 
+export interface MoveTaskPayload {
+  taskId: string;
+  targetListId: string;
+  targetParentTaskId: string | null;
+  referenceTaskId: string;
+  isAbove: boolean;
+}
+
 interface TaskTabTableProps {
   lists: TaskListNode[];
   users: Users[];
@@ -62,8 +72,10 @@ interface TaskTabTableProps {
   onAddTask: (req: CreateTaskRequest) => void;
   onUpdateTask: (task: TaskNode) => void;
   onDeleteTask: (id: string) => void;
-  onReorderTaskLists?: (orderedIds: string[]) => void;
-  onReorderTasks?: (taskListId: string, parentTaskId: string | null, orderedIds: string[]) => void;
+  onReorderTaskLists?: (orderedIds: string[], movedId?: string) => void;
+  onReorderTasks?: (taskListId: string, parentTaskId: string | null, orderedIds: string[], movedId?: string) => void;
+  /** Cross-list / nest-as-subtask move (PUT /task/move) */
+  onMoveTask?: (p: MoveTaskPayload) => void;
   onEditList: (tl: TaskListNode) => void;
   onAddTaskListAbove: (referenceListId: string) => void;
   onAddTaskListBelow: (referenceListId: string) => void;
@@ -71,6 +83,10 @@ interface TaskTabTableProps {
   onEditTask: (task: SubTaskNode, listId: string) => void;
   onSimpleAddTask: (taskListId?: string, parentTaskId?: string | null) => void;
   onTaskClick?: (task: SubTaskNode) => void;
+  /** localStorage key; when given, expanded lists/tasks survive a reload */
+  storageKey?: string;
+  /** open every list and task (used while a search / filter is active so matches are visible) */
+  forceExpand?: boolean;
 }
 
 export function TaskTabTable({
@@ -84,6 +100,7 @@ export function TaskTabTable({
   onDeleteTask,
   onReorderTaskLists,
   onReorderTasks,
+  onMoveTask,
   onAddTaskAtPosition,
   onAddTaskListAbove,
   onAddTaskListBelow,
@@ -91,9 +108,30 @@ export function TaskTabTable({
   onEditTask,
   onSimpleAddTask,
   onTaskClick,
+  storageKey,
+  forceExpand = false,
 }: TaskTabTableProps) {
-  const [expandedLists, setExpandedLists] = useState<Set<string>>(new Set());
-  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const saved = useMemo(() => {
+    try {
+      const raw = storageKey ? localStorage.getItem(storageKey) : null;
+      return raw ? (JSON.parse(raw) as { lists?: string[]; tasks?: string[]; seen?: string[] }) : null;
+    } catch {
+      return null;
+    }
+  }, [storageKey]);
+  const [expandedLists, setExpandedLists] = useState<Set<string>>(new Set(saved?.lists ?? []));
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set(saved?.tasks ?? []));
+  // lists we have already opened once — a list not in here is new and starts expanded
+  const seenLists = useRef<Set<string>>(new Set(saved?.seen ?? []));
+
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({
+        lists: [...expandedLists], tasks: [...expandedTasks], seen: [...seenLists.current],
+      }));
+    } catch { /* quota / private mode */ }
+  }, [storageKey, expandedLists, expandedTasks]);
 
   const [contextMenu, setContextMenu] = useState<{
     type: 'list' | 'task';
@@ -107,23 +145,40 @@ export function TaskTabTable({
     open: false, label: '', onConfirm: () => {},
   });
 
-  const dragRef = useRef<{ id: string; taskListId: string; parentTaskId: string | null } | null>(null);
+  const fs = useFullscreen();
+  const dragRef = useRef<{ kind: 'list' | 'task'; id: string; taskListId: string; parentTaskId: string | null } | null>(null);
+  const [overListId, setOverListId] = useState<string | null>(null);
 
-  // ── Auto-expand all lists jab data pehli baar aaye ──
+  // ── A list we have not seen before opens by default; ones the user collapsed stay collapsed ──
   useEffect(() => {
-    if (lists.length > 0) {
-      setExpandedLists(new Set(lists.map(l => String(l.listId))));
-    }
+    if (lists.length === 0) return;
+    const fresh = lists.map(l => String(l.listId)).filter(id => !seenLists.current.has(id));
+    if (fresh.length === 0) return;
+    fresh.forEach(id => seenLists.current.add(id));
+    setExpandedLists(prev => new Set([...prev, ...fresh]));
   }, [lists.map(l => l.listId).join(',')]);
+
+  // click anywhere on a row (not on its buttons / menus / portalled popovers)
+  const rowClick = (e: React.MouseEvent, fn: () => void) => {
+    if (!e.currentTarget.contains(e.target as Node)) return; // bubbled up from a portal
+    if ((e.target as HTMLElement).closest('button,a,input,select,textarea,[role="menuitem"],[role="combobox"]')) return;
+    fn();
+  };
 
   // ✅ NO SORT — jaisa API se aaya hai, waisa hi
   const sortedLists = lists;
+  const visibleExpandedTasks = forceExpand
+    ? new Set(lists.flatMap(l => collectIdsWithChildren(l.tasks || [])))
+    : expandedTasks;
   //  console.log('sortedLists TaskTabTable:', sortedLists);
 
   const rootTaskCount = lists.reduce((s, l) => s + (l.tasks?.length || 0), 0);
   const totalTaskCount = lists.reduce((s, l) => s + countAllTasks(l.tasks || []), 0);
   const subTaskCount = totalTaskCount - rootTaskCount;
-  const doneCount = lists.reduce((s, l) => s + countByStatus(l.tasks || [], 'DONE'), 0);
+  const doneCount = lists.reduce(
+    (s, l) => s + ['COMPLETED', 'CLOSED', 'DONE'].reduce((n, st) => n + countByStatus(l.tasks || [], st), 0),
+    0,
+  );
   const activeCount = lists.reduce((s, l) => s + countByStatus(l.tasks || [], 'IN_PROGRESS'), 0);
 
   const toggleList = (id: string) =>
@@ -176,7 +231,7 @@ export function TaskTabTable({
 
   const buildListMenuItems = (tl: TaskListNode) => [
     { label: 'Edit', icon: <Edit size={14} />, onClick: () => onEditList(tl) },
-    { label: 'Move', icon: <Move size={14} />, onClick: () => toast.info('Move coming soon'), dividerAbove: true },
+    { label: 'Move (WIP)', icon: <Move size={14} />, onClick: () => toast.info('Move coming soon'), dividerAbove: true },
     { label: 'Add task', icon: <Plus size={14} />, onClick: () => onSimpleAddTask(String(tl.listId), null), dividerBelow: true },
     { label: 'Create List Above', icon: <ListPlus size={14} />, onClick: () => onAddTaskListAbove(String(tl.listId)), shortcut: '⌃⇧↑', dividerAbove: true },
     { label: 'Create List Below', icon: <ListPlus size={14} />, onClick: () => onAddTaskListBelow(String(tl.listId)), shortcut: '⌃⇧↓' },
@@ -216,7 +271,36 @@ export function TaskTabTable({
 
   // ── Drag & Drop (siblings tree se derive hote hain, render order untouched) ──
   const handleDragStart = (id: string, tlId: string, parentId: string | null) => {
-    dragRef.current = { id, taskListId: tlId, parentTaskId: parentId };
+    dragRef.current = { kind: 'task', id, taskListId: tlId, parentTaskId: parentId };
+  };
+
+  // Is `maybeChildId` somewhere inside the subtree of `rootId`? (blocks dropping a task into itself)
+  const isInSubtree = (rootId: string, maybeChildId: string) => {
+    const root = findTaskAcrossLists(lists, Number(rootId));
+    return !!root && !!findInNodes(root.subTask || [], Number(maybeChildId));
+  };
+
+  // Drop a task on a list header -> becomes the first task of that list
+  const handleDropTaskOnList = (e: React.DragEvent, listId: string) => {
+    e.preventDefault();
+    const src = dragRef.current;
+    dragRef.current = null;
+    setOverListId(null);
+    if (!src || src.kind !== 'task') return;
+    const list = lists.find(l => String(l.listId) === listId);
+    const first = list?.tasks?.[0];
+    if (!first) {
+      toast.info('Empty list — add a task first, then drag tasks next to it');
+      return;
+    }
+    if (String(first.taskId) === src.id) return;
+    onMoveTask?.({
+      taskId: src.id,
+      targetListId: listId,
+      targetParentTaskId: null,
+      referenceTaskId: String(first.taskId),
+      isAbove: true,
+    });
   };
 
   const handleDropList = (e: React.DragEvent, targetId: string, before: boolean) => {
@@ -231,30 +315,66 @@ export function TaskTabTable({
 
     ids.splice(fromIdx, 1);
     ids.splice(before ? toIdx : toIdx + 1, 0, src.id);
-    onReorderTaskLists?.(ids);
+    onReorderTaskLists?.(ids, src.id);
     dragRef.current = null;
   };
 
-  const handleDropTask = (e: React.DragEvent, targetId: string, before: boolean, tlId: string, parentId: string | null) => {
+  const handleDropTask = (
+    e: React.DragEvent, targetId: string, before: boolean, tlId: string, parentId: string | null, zone?: DropZone,
+  ) => {
     e.preventDefault();
     const src = dragRef.current;
-    if (!src || src.id === targetId) return;
-
-    const siblings = getSiblingsArray(lists, tlId, parentId);
-    const ids = siblings.map(t => String(t.taskId));
-    const fromIdx = ids.indexOf(src.id);
-    const toIdx = ids.indexOf(targetId);
-    if (fromIdx < 0 || toIdx < 0) return;
-
-    ids.splice(fromIdx, 1);
-    ids.splice(before ? toIdx : toIdx + 1, 0, src.id);
-    onReorderTasks?.(tlId, parentId, ids);
     dragRef.current = null;
+    if (!src || src.kind !== 'task' || src.id === targetId) return;
+
+    // never drop a task into its own subtree
+    if (isInSubtree(src.id, targetId)) {
+      showWarning("A task can't be moved inside its own subtask");
+      return;
+    }
+
+    // 1) middle of the row -> nest as a subtask of the target
+    if (zone === 'inside') {
+      const target = findTaskAcrossLists(lists, Number(targetId));
+      const kids = target?.subTask || [];
+      if (src.parentTaskId === targetId) return; // already its child
+      setExpandedTasks(prev => new Set(prev).add(targetId)); // show the moved subtask
+      onMoveTask?.({
+        taskId: src.id,
+        targetListId: tlId,
+        targetParentTaskId: targetId,
+        // API needs a reference task: last child if any, else the parent itself
+        referenceTaskId: kids.length ? String(kids[kids.length - 1].taskId) : targetId,
+        isAbove: false,
+      });
+      return;
+    }
+
+    // 2) edge of the row -> sibling of the target
+    const sameContainer = src.taskListId === tlId && (src.parentTaskId ?? null) === (parentId ?? null);
+    if (sameContainer) {
+      const ids = getSiblingsArray(lists, tlId, parentId).map(t => String(t.taskId));
+      const fromIdx = ids.indexOf(src.id);
+      const toIdx = ids.indexOf(targetId);
+      if (fromIdx < 0 || toIdx < 0) return;
+      ids.splice(fromIdx, 1);
+      ids.splice(before ? toIdx : toIdx + 1, 0, src.id);
+      onReorderTasks?.(tlId, parentId, ids, src.id);
+      return;
+    }
+
+    // different list / different parent
+    onMoveTask?.({
+      taskId: src.id,
+      targetListId: tlId,
+      targetParentTaskId: parentId,
+      referenceTaskId: targetId,
+      isAbove: before,
+    });
   };
 
   return (
-    <>
-    
+    <div className={cn('flex flex-col h-full min-h-0', fs.on && FULLSCREEN_CLASS)}>
     <TaskTableHeader
   listsCount={sortedLists.length}
   rootTaskCount={rootTaskCount}
@@ -267,16 +387,19 @@ export function TaskTabTable({
   onCollapseAll={collapseAll}
   onSimpleAddTask={onSimpleAddTask}
 />
-    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+    <div className="border border-border rounded-none overflow-hidden bg-card shadow-card flex flex-col flex-1 min-h-0">
+      <div className="flex justify-end border-b border-border px-3 py-1.5 shrink-0">
+        <FullscreenButton on={fs.on} onToggle={fs.toggle} />
+      </div>
 
-      <div className="overflow-y-auto" style={{ maxHeight: '500px' }}>
+      <div className="overflow-auto scrollbar-thin flex-1 min-h-0">
         <table className="w-full border-collapse text-sm">
           <thead className="sticky top-0 z-10">
-            <tr className="bg-accent-55 border-b border-slate-200">
-              {['Name', 'Status', 'Priority', 'Due Date', ''].map((h, i) => (
+            <tr className="bg-sidebar">
+              {['Name', 'Issues', 'Status', 'Priority', 'Due Date', ''].map((h, i) => (
                 <th key={i} className={cn(
-                  'px-3 py-2 text-[11px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap',
-                  i === 4 ? 'text-right w-24' : 'text-left'
+                  'px-3 py-2.5 text-[11px] font-semibold text-white/75 uppercase tracking-wider whitespace-nowrap',
+                  i === 5 ? 'text-right w-24' : i === 1 ? 'text-center w-20' : 'text-left'
                 )}>{h}</th>
               ))}
             </tr>
@@ -284,7 +407,7 @@ export function TaskTabTable({
           <tbody>
             {sortedLists.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-16 text-slate-400">
+                <td colSpan={6} className="text-center py-16 text-slate-400">
                   <Folder size={32} className="mx-auto mb-2 opacity-20" />
                   <p className="text-sm">No task lists yet — click "New List" to start</p>
                 </td>
@@ -295,24 +418,39 @@ export function TaskTabTable({
                 const rootTasksForList = tl.tasks || [];
                 const totalTaskandSubTask=tl.taskCount;
                 const listIdStr = String(tl.listId);
-                const isExpanded = expandedLists.has(listIdStr);
+                const isExpanded = forceExpand || expandedLists.has(listIdStr);
 
                 return (
                   <React.Fragment key={`tl-${tl.listId}`}>
                     <tr
                       draggable
+                      onClick={e => rootTasksForList.length > 0 && rowClick(e, () => toggleList(listIdStr))}
                       onContextMenu={e => handleContextMenu(e, 'list', tl)}
-                      onDragStart={() => (dragRef.current = { id: listIdStr, taskListId: listIdStr, parentTaskId: null })}
-                      onDragOver={e => e.preventDefault()}
+                      onDragStart={() => (dragRef.current = { kind: 'list', id: listIdStr, taskListId: listIdStr, parentTaskId: null })}
+                      onDragOver={e => {
+                        e.preventDefault();
+                        if (dragRef.current?.kind === 'task' && overListId !== listIdStr) setOverListId(listIdStr);
+                      }}
+                      onDragLeave={e => {
+                        if (!e.currentTarget.contains(e.relatedTarget as Node)) setOverListId(null);
+                      }}
                       onDrop={e => {
+                        if (dragRef.current?.kind === 'task') {
+                          handleDropTaskOnList(e, listIdStr);
+                          return;
+                        }
                         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                         handleDropList(e, listIdStr, e.clientY < rect.top + rect.height / 2);
                       }}
-                      className={cn('cursor-grab border-b border-slate-300 group', tlIdx > 0 ? 'border-t border-slate-200' : '', 'bg-amber-50/50')}
+                      className={cn(
+                        'cursor-grab border-b border-border group bg-gradient-to-r from-primary/[0.10] via-primary/[0.04] to-transparent',
+                        tlIdx > 0 && 'border-t-2 border-t-border',
+                        overListId === listIdStr && '[&>td]:bg-primary/15 [&>td]:shadow-[inset_0_0_0_1.5px_hsl(var(--primary))]',
+                      )}
                     >
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2.5 border-l-4 border-l-primary">
                         <div className="flex items-center gap-2">
-                          <GripVertical size={13} className="text-slate-300 flex-shrink-0" />
+                          <GripVertical size={13} className="text-muted-foreground/40 flex-shrink-0" />
                           {rootTasksForList.length > 0 ? (
                             <button onClick={() => toggleList(listIdStr)} className="flex-shrink-0 text-slate-500 hover:text-slate-700">
                               {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -320,18 +458,20 @@ export function TaskTabTable({
                           ) : (
                             <span className="w-[14px] flex-shrink-0" />
                           )}
-                          <AlignJustify size={15} className="text-violet-500 flex-shrink-0" />
-                          <span className="font-semibold text-slate-700 text-[13px]">{tl.listTitle}</span>
-                          <Badge variant="secondary" className="text-[10px] bg-primary px-1.5 py-0 h-4">{totalTaskandSubTask}</Badge>
+                          <span className="h-6 w-6 rounded-md bg-primary/15 text-primary grid place-items-center flex-shrink-0">
+                            <AlignJustify size={13} />
+                          </span>
+                          <span className="font-display font-bold text-[13.5px] text-foreground">{tl.listTitle}</span>
+                          <Badge variant="secondary" className="text-[10px] bg-primary/15 text-primary hover:bg-primary/15 px-2 py-0 h-4 font-semibold">{totalTaskandSubTask} items</Badge>
                         </div>
                       </td>
-                      <td colSpan={3} />
+                      <td colSpan={4} />
                       <td className="px-3 py-2">
                         <div className="flex items-center justify-end gap-0.5">
                           <Button variant="ghost" size="icon" className="h-6 w-6" title="Add task" onClick={() => onSimpleAddTask(listIdStr, null)}>
                             <Plus size={12} />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" title="More options" onClick={e => handleThreeDots(e, 'list', tl)}>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 group-hover:opacity-100 hover:opacity-100 transition-opacity" title="More options" onClick={e => handleThreeDots(e, 'list', tl)}>
                             <MoreHorizontal size={13} />
                           </Button>
                         </div>
@@ -341,7 +481,7 @@ export function TaskTabTable({
                     {isExpanded && (
                       rootTasksForList.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="py-3 text-center text-[12px] text-slate-400">No tasks yet — click + to add one</td>
+                          <td colSpan={6} className="py-3 text-center text-[12px] text-slate-400">No tasks yet — click + to add one</td>
                         </tr>
                       ) : (
                         rootTasksForList.map(task => (
@@ -350,7 +490,7 @@ export function TaskTabTable({
                             task={task}
                             taskListId={listIdStr}
                             depth={1}
-                            expandedTasks={expandedTasks}
+                            expandedTasks={visibleExpandedTasks}
                             onToggleTask={toggleTask}
                             onOpenEditTask={t => onEditTask(t, listIdStr)}
                             onDeleteTask={confirmDeleteTask}
@@ -360,6 +500,7 @@ export function TaskTabTable({
                             onContextMenu={(e, t) => handleContextMenu(e, 'task', t, listIdStr)}
                             onThreeDots={(e, t) => handleThreeDots(e, 'task', t, listIdStr)}
                             onTaskClick={onTaskClick}
+                            onAddSubtask={(t) => onSimpleAddTask(listIdStr, String(t.taskId))}
                           />
                         ))
                       )
@@ -392,6 +533,6 @@ export function TaskTabTable({
         />
       )}
     </div>
-    </>
+    </div>
   );
 }

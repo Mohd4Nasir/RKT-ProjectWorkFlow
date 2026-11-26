@@ -1,4 +1,5 @@
 import axiosInstance from "./axiosInstance";
+import type { TaskCommentAttachment } from "./fileApiService";
 
 /* =========================
    TASK LIST DTOs
@@ -14,6 +15,25 @@ export interface UpdateTaskListDto {
   sequence?: number;
 }
 
+export type CommentLikeType = "LIKE" | "DISLIKE";
+
+export interface TaskComment {
+  id: number;
+  taskId: number;
+  authorId: number;
+  authorName: string;
+  content: string;
+  commentUpdatedOn: string;
+  commentType?: string;
+  parentCommentId?: number | null;
+  replyCount?: number;
+  likeCount?: number;
+  dislikeCount?: number;
+  userLikeType?: CommentLikeType | null;
+  likedByCurrentUser?: boolean;
+  attachments?: TaskCommentAttachment[];
+}
+
 /* =========================
    TASK DTOs
 ========================= */
@@ -27,6 +47,8 @@ export interface CreateTaskDto {
   taskStartDate?: string;
   taskEndDate?: string;
   taskStatus?: string;
+  /** NONE | LOW | MEDIUM | HIGH — the server uses NONE when omitted */
+  taskPriority?: string;
   priority?: string;
   insertAfterId?: string | null;
 }
@@ -49,6 +71,7 @@ export interface CreateTaskAtPositionDto {
   taskEndDate?: string;
   refTaskId: number | string;
   isAbove: boolean;
+  taskPriority?: string;
 }
 
 export interface CreateTaskListAtPositionDto {
@@ -73,6 +96,68 @@ export interface AssignTaskMemberDto {
 ========================= */
 
 export const taskService = {
+  // PUT /task/status
+  updateTaskStatus: async (projectId: number | string, taskId: number | string, taskStatus: string) => {
+    const response = await axiosInstance.put("/task/status", {
+      projectId: Number(projectId),
+      taskId: Number(taskId),
+      taskStatus,
+    });
+    return response.data;
+  },
+
+  // PUT /task/priority   (taskPriority: NONE | LOW | MEDIUM | HIGH)
+  updateTaskPriority: async (projectId: number | string, taskId: number | string, taskPriority: string) => {
+    const response = await axiosInstance.put("/task/priority", {
+      projectId: Number(projectId),
+      taskId: Number(taskId),
+      taskPriority: taskPriority.toUpperCase(),
+    });
+    return response.data;
+  },
+
+  // GET /task/priorities
+  getTaskPriorities: async () => {
+    const response = await axiosInstance.get("/task/priorities");
+    return response.data;
+  },
+
+  // GET /task/statuses
+  getTaskStatuses: async () => {
+    const response = await axiosInstance.get("/task/statuses");
+    return response.data;
+  },
+
+  // PUT /task/move  (drag a task to another list / parent / position)
+  moveTask: async (data: {
+    projectId: number | string;
+    taskId: number | string;
+    targetListId: number | string;
+    targetParentTaskId?: number | string | null;
+    referenceTaskId?: number | string;
+    isAbove?: boolean;
+  }) => {
+    const response = await axiosInstance.put("/task/move", data);
+    return response.data;
+  },
+
+  // PUT /task/list/position  (reorder lists)
+  updateListPosition: async (data: {
+    projectId: number | string;
+    taskListId: number | string;
+    referenceListId: number | string;
+    isAbove: boolean;
+  }) => {
+    const response = await axiosInstance.put("/task/list/position", data);
+    return response.data;
+  },
+
+  // GET /task/{taskId}/sub-tree
+  getSubTree: async (taskId: number | string) => {
+    const response = await axiosInstance.get(`/task/${taskId}/sub-tree`);
+    return response.data;
+  },
+
   /* =========================
      TASK  List APIs
   ========================= */
@@ -103,13 +188,18 @@ export const taskService = {
     }
   },
 
-  // Update List — accepts a partial DTO object, not a bare string
-  updateTaskList: async (listId: string | number, data: UpdateTaskListDto) => {
+  // Update List  (PUT /task/list)
+  updateTaskList: async (
+    projectId: string | number,
+    listId: string | number,
+    listTitle: string,
+  ) => {
     try {
-      const response = await axiosInstance.put(
-        `/task/list/update/${listId}`,
-        data,
-      );
+      const response = await axiosInstance.put("/task/list", {
+        projectId: Number(projectId),
+        taskListId: Number(listId),
+        listTitle,
+      });
       return response.data;
     } catch (error) {
       console.error("Update task list error:", error);
@@ -146,6 +236,7 @@ export const taskService = {
         description: data.taskDescription ?? "",
         startDate: data.taskStartDate ?? "",
         endDate: data.taskEndDate ?? "",
+        ...(data.taskPriority ? { taskPriority: data.taskPriority.toUpperCase() } : {}),
       });
       return response.data;
     } catch (error) {
@@ -168,17 +259,21 @@ export const taskService = {
     }
   },
   // Update Task
-  updateTask: async (taskId: string | number, data: UpdateTaskDto) => {
+  // Update task title / description / dates  (PUT /task/update)
+  // Status has its own endpoint: updateTaskStatus (PUT /task/status)
+  updateTask: async (
+    projectId: string | number,
+    taskId: string | number,
+    data: UpdateTaskDto,
+  ) => {
     try {
-      const response = await axiosInstance.put(`/task/update/${taskId}`, {
+      const response = await axiosInstance.put("/task/update", {
+        projectId: Number(projectId),
+        taskId: Number(taskId),
         taskTitle: data.taskTitle,
-        description: data.taskDescription,
-        startDate: data.taskStartDate,
-        endDate: data.taskEndDate,
-        priority: data.priority,
-        status: data.taskStatus,
-        assigneeId: data.assigneeId,
-        sequence: data.sequence,
+        taskDescription: data.taskDescription,
+        taskStartDate: data.taskStartDate || undefined,
+        taskEndDate: data.taskEndDate || undefined,
       });
       return response.data;
     } catch (error) {
@@ -220,16 +315,6 @@ export const taskService = {
       throw error;
     }
   },
-  getSubtaskInTaskDeatils: async (taskId: string | number) => {
-    try {
-      const res = await axiosInstance.get(`/task/${taskId}/full-tree`);
-      console.log("taskService sub task", res);
-      return res.data.data;
-    } catch (error) {
-      console.error("Create Task at positons", error);
-    }
-  },
-
   /* =========================
      TASK MEMBER / CONTRIBUTOR APIs
   ========================= */
@@ -276,5 +361,58 @@ export const taskService = {
       console.error("Assign task member error:", error);
       throw error;
     }
+  },
+
+  /* =========================
+     TASK COMMENT APIs  (task-comment-controller)
+     Works for tasks and subtasks alike — a subtask is just a task with its own taskId.
+  ========================= */
+
+  // GET /task/comment/task/{taskId}
+  getTaskComments: async (taskId: number | string): Promise<TaskComment[]> => {
+    const res = await axiosInstance.get(`/task/comment/task/${taskId}`);
+    return res.data?.data ?? [];
+  },
+
+  // POST /task/comment
+  addTaskComment: async (taskId: number | string, content: string): Promise<TaskComment> => {
+    const res = await axiosInstance.post("/task/comment", { taskId: Number(taskId), content });
+    return res.data?.data;
+  },
+
+  // PUT /task/comment/{commentId}
+  updateTaskComment: async (commentId: number | string, taskId: number | string, content: string): Promise<TaskComment> => {
+    const res = await axiosInstance.put(`/task/comment/${commentId}`, { taskId: Number(taskId), content });
+    return res.data?.data;
+  },
+
+  // POST /task/comment/{commentId}/reply
+  replyToTaskComment: async (commentId: number | string, taskId: number | string, content: string): Promise<TaskComment> => {
+    const res = await axiosInstance.post(`/task/comment/${commentId}/reply`, { taskId: Number(taskId), content });
+    return res.data?.data;
+  },
+
+  // GET /task/comment/{commentId}/replies
+  getTaskCommentReplies: async (commentId: number | string): Promise<TaskComment[]> => {
+    const res = await axiosInstance.get(`/task/comment/${commentId}/replies`);
+    return res.data?.data ?? [];
+  },
+
+  // POST /task/comment/{commentId}/like
+  likeTaskComment: async (commentId: number | string, likeType: CommentLikeType) => {
+    const res = await axiosInstance.post(`/task/comment/${commentId}/like`, { taskCommentId: Number(commentId), likeType });
+    return res.data;
+  },
+
+  // DELETE /task/comment/{commentId}/like
+  unlikeTaskComment: async (commentId: number | string) => {
+    const res = await axiosInstance.delete(`/task/comment/${commentId}/like`);
+    return res.data;
+  },
+
+  // DELETE /task/comment/{commentId}
+  deleteTaskComment: async (commentId: number | string) => {
+    const res = await axiosInstance.delete(`/task/comment/${commentId}`);
+    return res.data;
   },
 };

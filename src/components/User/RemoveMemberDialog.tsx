@@ -41,11 +41,11 @@ export function RemoveMemberDialog({ open, onOpenChange, userToRemove, onConfirm
             </div>
           </div>
           
-          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-sm text-amber-800">
+          <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+            <p className="text-sm text-orange-800">
               <strong>Warning:</strong> This action cannot be undone. The user will lose access to:
             </p>
-            <ul className="text-xs text-amber-700 mt-2 space-y-1 list-disc list-inside">
+            <ul className="text-xs text-orange-700 mt-2 space-y-1 list-disc list-inside">
               <li>All project tasks and documents</li>
               <li>Project discussions and comments</li>
               <li>Project settings and configurations</li>

@@ -45,7 +45,7 @@ export interface Project {
   ownerId?: string | number;
   ownerName?: string;
 
-  projectStatus: 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CLOSED'| 'ON_HOLD' | 'DELAYED';
+  projectStatus: 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CLOSED' | 'ON_HOLD' | 'DELAYED' | 'ACTIVE' | 'ON_TRACK' | 'IN_TESTING' | 'APPROVED' | 'CANCELLED' | 'PLANNING' | 'INVOICED';
   description?: string;
   progress?: number;
   startDate?: string;

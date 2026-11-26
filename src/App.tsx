@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -12,6 +12,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { KeycloakProvider } from '@/providers/KeycloakProvider';  // ✅ NEW
 
 import NotFound from "./pages/NotFound";
+import Forbidden from "./pages/Forbidden";
 
 
 const Login = lazy(() => import('./pages/Login'));
@@ -26,12 +27,18 @@ const Notifications = lazy(() => import('./pages/Notifications'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Files = lazy(() => import('./pages/Files'));
+const ComingSoon = lazy(() => import('./pages/ComingSoon'));
 
 const queryClient = new QueryClient();
 
 function ThemeBoot() {
   const theme = useAppSelector((s) => s.ui.theme);
-  useEffect(() => { document.documentElement.classList.toggle('dark', theme === 'dark'); }, [theme]);
+  const colorTheme = useAppSelector((s) => s.ui.colorTheme);
+  const { pathname } = useLocation();
+  // the login screen has its own look — the dark-mode setting must not touch it
+  const onLogin = pathname === '/login';
+  useEffect(() => { document.documentElement.classList.toggle('dark', theme === 'dark' && !onLogin); }, [theme, onLogin]);
+  useEffect(() => { document.documentElement.dataset.theme = colorTheme || 'classic'; }, [colorTheme]);
   return null;
 }
 
@@ -84,19 +91,23 @@ const App = () => (
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/projects" element={<ProtectedRoute roles={['admin']}><Projects /></ProtectedRoute>} />
                   <Route path="/projects/:id" element={<ProjectDetails />} />
-                  <Route path="/my-projects" element={<Projects  />} />
+                  <Route path="/my-projects" element={<Projects mine />} />
+                  <Route path="/my-projects/:id" element={<ProjectDetails />} />
                   <Route path="/tasks" element={<ProtectedRoute roles={['admin']}><Tasks /></ProtectedRoute>} />
                   <Route path="/my-tasks" element={<Tasks mine />} />
                   <Route path="/users" element={<ProtectedRoute roles={['admin']}><Users /></ProtectedRoute>} />
                   <Route path="/reports" element={<ProtectedRoute roles={['admin']}><Reports /></ProtectedRoute>} />
+                  <Route path="/workspace/projects" element={<ComingSoon title="My Projects" message="Your personal project view is coming soon." />} />
+                  <Route path="/workspace/tasks" element={<ComingSoon title="My Tasks" message="Your personal task view is coming soon." />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/files" element={<Files />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/403" element={<Forbidden />} />
+                  {/* Unknown URL: 404 shown inside the layout so sidebar/header stay */}
+                  <Route path="*" element={<NotFound />} />
                 </Route>
-
-                <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
           </BrowserRouter>

@@ -1,7 +1,8 @@
 
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Sparkles, Eye, EyeOff, ShieldCheck, CheckCircle2, Lock, Mail, Info } from 'lucide-react';
+import { Logo } from '@/components/Logo';
+import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, ShieldCheck, CheckCircle2, Lock, Mail, Info } from 'lucide-react';
 import { useAuth } from '@/providers/KeycloakProvider';
 import keycloak from '@/lib/keycloak';
 import { useAppSelector } from '@/store';
@@ -145,7 +146,7 @@ export default function Login() {
           className="relative z-[1] w-full md:w-[34%] lg:w-[30%] bg-white 
              flex items-center justify-center px-5 py-10 sm:px-6 sm:py-12 
              md:rounded-l-[24px] m-4 
-             h-auto max-h-[80vh] md:max-h-[75vh] lg:max-h-[70vh]
+             h-auto
              self-center overflow-hidden
              ml-auto mr-[5%] md:mr-[8%] lg:mr-[10%]"
         >
@@ -163,15 +164,10 @@ export default function Login() {
             {/* Mobile-only logo (branding panel hidden below md) */}
             <div className="md:hidden flex flex-col items-center gap-3 mb-8">
               <div className="flex items-center gap-2">
-                <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: T.pink }}
-                >
-                  <Sparkles size={20} style={{ color: T.navy }} />
-                </div>
+                <Logo className="h-11 w-11" />
                 <div>
-                  <h2 className="text-lg font-medium" style={{ color: T.navy }}>RishiKirti</h2>
-                  <p className="text-xs" style={{ color: T.para, opacity: 0.7 }}>Technologies</p>
+                  <h2 className="text-lg font-medium" style={{ color: T.navy }}>WorkSphere</h2>
+                  <p className="text-xs" style={{ color: T.para, opacity: 0.7 }}>by RishiKirti Technologies</p>
                 </div>
               </div>
             </div>
@@ -220,13 +216,15 @@ export default function Login() {
             </div>
 
             <div className="text-center mt-5">
-              <Link
-                to="/forgot-password"
+              {/* Password reset lives on the Keycloak login page */}
+              <button
+                type="button"
+                onClick={handleKeycloakLogin}
                 className="text-[12.5px] hover:opacity-75 transition-opacity"
                 style={{ color: T.navy }}
               >
                 Forgot password?
-              </Link>
+              </button>
             </div>
           </div>
         </div>

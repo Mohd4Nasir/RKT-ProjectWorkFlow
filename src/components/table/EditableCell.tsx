@@ -68,7 +68,7 @@ export const EditableCell = memo(function EditableCell({
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-        className="opacity-0 group-hover/ec:opacity-100 text-muted-foreground hover:text-primary p-0.5 rounded transition-opacity flex-shrink-0"
+        className="opacity-70 group-hover/ec:opacity-100 hover:opacity-100 text-muted-foreground hover:text-primary p-0.5 rounded transition-opacity flex-shrink-0"
         aria-label="Edit"
       >
         <Pencil className="h-3 w-3" />
